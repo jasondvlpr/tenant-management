@@ -297,4 +297,136 @@ class RemoteProvisioningService
             return false;
         }
     }
+
+    public function addDomainAlias(DomainAlias $alias): bool
+    {
+        $tenant = $alias->tenant;
+        $node = $tenant->clusterNode;
+        if (!$node) {
+            return false;
+        }
+
+        $baseUrl = rtrim($node->endpoint_url, '/');
+        $remoteId = $tenant->remote_tenant_id ?: ('t-' . $tenant->id);
+
+        if (str_ends_with($baseUrl, '/api/central/v1')) {
+            $endpoint = $baseUrl . '/tenants/' . urlencode($remoteId) . '/domains';
+        } elseif (str_contains($baseUrl, '/api/')) {
+            $endpoint = preg_replace('#/api/.*$#', '/api/central/v1/tenants/' . urlencode($remoteId) . '/domains', $baseUrl);
+        } else {
+            $endpoint = $baseUrl . '/api/central/v1/tenants/' . urlencode($remoteId) . '/domains';
+        }
+
+        $payload = [
+            'domain' => $alias->alias
+        ];
+
+        $startTime = microtime(true);
+
+        try {
+            $response = Http::withHeaders([
+                'X-API-Key' => $node->api_secret,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])
+            ->timeout(30)
+            ->post($endpoint, $payload);
+
+            $latency = round((microtime(true) - $startTime) * 1000) . 'ms';
+            $statusCode = $response->status();
+            $statusText = $statusCode . ' ' . ($response->successful() ? 'Domain Alias Created' : 'HTTP Error');
+
+            ApiLog::create([
+                'method' => 'POST',
+                'endpoint' => $endpoint,
+                'cluster_name' => $node->name,
+                'tenant_name' => $tenant->name . ' (Add Domain Alias: ' . $alias->alias . ')',
+                'status_code' => $statusCode,
+                'status_text' => $statusText,
+                'latency_ms' => $latency,
+                'request_body' => json_encode($payload, JSON_PRETTY_PRINT),
+                'response_body' => json_decode($response->body(), true) ? json_encode($response->json(), JSON_PRETTY_PRINT) : $response->body(),
+            ]);
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            $latency = round((microtime(true) - $startTime) * 1000) . 'ms';
+            ApiLog::create([
+                'method' => 'POST',
+                'endpoint' => $endpoint,
+                'cluster_name' => $node->name,
+                'tenant_name' => $tenant->name . ' (Add Domain Alias Error)',
+                'status_code' => 500,
+                'status_text' => '500 Connection Failed',
+                'latency_ms' => $latency,
+                'request_body' => json_encode($payload, JSON_PRETTY_PRINT),
+                'response_body' => json_encode(['error' => $e->getMessage()], JSON_PRETTY_PRINT),
+            ]);
+            return false;
+        }
+    }
+
+    public function removeDomainAlias(DomainAlias $alias): bool
+    {
+        $tenant = $alias->tenant;
+        $node = $tenant->clusterNode;
+        if (!$node) {
+            return false;
+        }
+
+        $baseUrl = rtrim($node->endpoint_url, '/');
+        $remoteId = $tenant->remote_tenant_id ?: ('t-' . $tenant->id);
+        $domainName = $alias->alias;
+
+        if (str_ends_with($baseUrl, '/api/central/v1')) {
+            $endpoint = $baseUrl . '/tenants/' . urlencode($remoteId) . '/domains/' . urlencode($domainName);
+        } elseif (str_contains($baseUrl, '/api/')) {
+            $endpoint = preg_replace('#/api/.*$#', '/api/central/v1/tenants/' . urlencode($remoteId) . '/domains/' . urlencode($domainName), $baseUrl);
+        } else {
+            $endpoint = $baseUrl . '/api/central/v1/tenants/' . urlencode($remoteId) . '/domains/' . urlencode($domainName);
+        }
+
+        $startTime = microtime(true);
+
+        try {
+            $response = Http::withHeaders([
+                'X-API-Key' => $node->api_secret,
+                'Accept' => 'application/json',
+            ])
+            ->timeout(30)
+            ->delete($endpoint);
+
+            $latency = round((microtime(true) - $startTime) * 1000) . 'ms';
+            $statusCode = $response->status();
+            $statusText = $statusCode . ' ' . ($response->successful() ? 'Domain Alias Removed' : 'HTTP Error');
+
+            ApiLog::create([
+                'method' => 'DELETE',
+                'endpoint' => $endpoint,
+                'cluster_name' => $node->name,
+                'tenant_name' => $tenant->name . ' (Remove Domain Alias: ' . $domainName . ')',
+                'status_code' => $statusCode,
+                'status_text' => $statusText,
+                'latency_ms' => $latency,
+                'request_body' => json_encode(['domain' => $domainName], JSON_PRETTY_PRINT),
+                'response_body' => json_decode($response->body(), true) ? json_encode($response->json(), JSON_PRETTY_PRINT) : $response->body(),
+            ]);
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            $latency = round((microtime(true) - $startTime) * 1000) . 'ms';
+            ApiLog::create([
+                'method' => 'DELETE',
+                'endpoint' => $endpoint,
+                'cluster_name' => $node->name,
+                'tenant_name' => $tenant->name . ' (Remove Domain Alias Error)',
+                'status_code' => 500,
+                'status_text' => '500 Connection Failed',
+                'latency_ms' => $latency,
+                'request_body' => json_encode(['domain' => $domainName], JSON_PRETTY_PRINT),
+                'response_body' => json_encode(['error' => $e->getMessage()], JSON_PRETTY_PRINT),
+            ]);
+            return false;
+        }
+    }
 }

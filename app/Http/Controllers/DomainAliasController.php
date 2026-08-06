@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\SyncCloudflareDnsJob;
+use App\Jobs\SyncTenantDomainJob;
 use App\Models\DomainAlias;
 use App\Models\Tenant;
 use App\Services\CloudflareDnsService;
@@ -39,15 +40,20 @@ class DomainAliasController extends Controller
 
         $targetIp = $tenant->clusterNode ? $tenant->clusterNode->ip_address : '127.0.0.1';
         SyncCloudflareDnsJob::dispatch($alias, $targetIp, $tenant->name);
+        SyncTenantDomainJob::dispatch($alias, 'add');
 
         return redirect()->back()->with('success', 'Domain Alias ' . $alias->alias . ' berhasil didaftarkan dan di-sinkronkan dengan Cloudflare!');
     }
 
-    public function destroy(DomainAlias $domain, CloudflareDnsService $cfService)
+    public function destroy(DomainAlias $domain, CloudflareDnsService $cfService, \App\Services\RemoteProvisioningService $provisionService)
     {
         $cfService->deleteRecord($domain->alias, $domain->tenant->name ?? 'Unknown');
+        
+        // Remove from tenant aaPanel synchronously since model will be deleted
+        $provisionService->removeDomainAlias($domain);
+
         $domain->delete();
 
-        return redirect()->back()->with('success', 'Domain Alias telah dihapus dari zona Cloudflare.');
+        return redirect()->back()->with('success', 'Domain Alias telah dihapus dari zona Cloudflare dan API Tenant.');
     }
 }
