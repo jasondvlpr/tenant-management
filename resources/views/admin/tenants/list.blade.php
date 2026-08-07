@@ -695,6 +695,10 @@
                                 <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Agent Token</label>
                                 <input type="text" x-model="activeConfig.api_configs.game_api.agent_token" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                             </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Secret Key</label>
+                                <input type="text" x-model="activeConfig.api_configs.game_api.secret_key" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
                         </div>
                     </div>
 
@@ -711,8 +715,8 @@
                                 <input type="text" x-model="activeConfig.api_configs.payment_api.agent_code" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                             </div>
                             <div>
-                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Agent Token</label>
-                                <input type="text" x-model="activeConfig.api_configs.payment_api.agent_token" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Secret Key</label>
+                                <input type="text" x-model="activeConfig.api_configs.payment_api.secret_key" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                             </div>
                         </div>
                     </div>
