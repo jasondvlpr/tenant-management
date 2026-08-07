@@ -16,8 +16,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Control Plane Protected Routes (Requires 'auth' Middleware)
 Route::middleware('auth')->group(function () {
-    // Dashboard Master & Tenants
     Route::get('/', [TenantController::class, 'index'])->name('tenants.index');
+    Route::get('/tenants', [TenantController::class, 'list'])->name('tenants.list');
     Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
     Route::post('/tenants/sync', [TenantController::class, 'sync'])->name('tenants.sync');
     Route::post('/tenants/{tenant}/check-cloudflare', [TenantController::class, 'checkCloudflareStatus'])->name('tenants.check-cloudflare');

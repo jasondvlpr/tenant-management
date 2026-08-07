@@ -19,6 +19,14 @@ class TenantController extends Controller
         return view('admin.tenants.index', compact('tenants', 'nodes'));
     }
 
+    public function list()
+    {
+        $tenants = Tenant::with('clusterNode', 'aliases')->latest()->get();
+        $nodes = ClusterNode::all();
+
+        return view('admin.tenants.list', compact('tenants', 'nodes'));
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([

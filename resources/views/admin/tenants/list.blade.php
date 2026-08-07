@@ -6,9 +6,12 @@
         openModalEdit: false,
         openModalDelete: false,
         openModalNS: false,
+        openModalDetail: false,
         selectedFilter: 'all', 
         searchQuery: '',
         activeTenant: null,
+        activeTenantDetail: null,
+        isLoadingDetail: false,
         tenants: {{ $tenants->map(function($t) {
             return [
                 'id' => $t->id,
@@ -49,6 +52,25 @@
         openNSManager(tenant) {
             this.activeTenant = tenant;
             this.openModalNS = true;
+        },
+        openDetailManager(tenant) {
+            this.activeTenant = tenant;
+            this.activeTenantDetail = null;
+            this.isLoadingDetail = true;
+            this.openModalDetail = true;
+            
+            fetch('/api/central/v1/tenants/' + (tenant.remoteId || tenant.id) + '?with_stats=true')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        this.activeTenantDetail = data.data;
+                    }
+                    this.isLoadingDetail = false;
+                })
+                .catch(err => {
+                    this.isLoadingDetail = false;
+                    console.error(err);
+                });
         }
     }">
 
@@ -76,15 +98,15 @@
         <!-- Page Header & Title Banner -->
         <div class="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                    <span class="inline-block h-2 w-2 rounded-full bg-indigo-600 animate-pulse"></span>
-                    Central Command Hub & Cloudflare Auto-DNS
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    <span class="inline-block h-2 w-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                    Tenant Management
                 </div>
                 <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white md:text-3xl">
-                    Multi-Server Tenant & Domain Registry
+                    Daftar Tenant Aktif
                 </h1>
                 <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    Kelola instans tenant di berbagai cluster server master dan otomatisasi DNS zona Cloudflare dalam satu kendali terpusat.
+                    Kelola dan pantau semua instans tenant Anda dari satu halaman.
                 </p>
             </div>
             
@@ -99,7 +121,7 @@
 
                 <button 
                     @click="openModalCreate = true" 
-                    class="group relative flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:from-indigo-700 transition duration-200"
+                    class="group relative flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-green-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:from-emerald-700 transition duration-200"
                 >
                     <svg class="h-5 w-5 transition-transform group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -109,27 +131,118 @@
             </div>
         </div>
 
-        <!-- Infrastructure Status Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-            <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-slate-800/80 dark:bg-slate-900">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Total Tenant Aktif</span>
-                <h3 class="text-2xl font-black text-slate-900 dark:text-white mt-1">{{ $tenants->count() }} <span class="text-xs font-medium text-emerald-500">Live Deployments</span></h3>
+
+
+        <!-- Filter & Search Toolbar -->
+        <div class="mb-6 flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs dark:border-slate-800/80 dark:bg-slate-900 sm:flex-row sm:items-center">
+            <div class="flex flex-wrap gap-2">
+                <button @click="selectedFilter = 'all'" :class="selectedFilter === 'all' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-semibold shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60'" class="rounded-xl px-4 py-2 text-xs transition duration-200">
+                    Semua Tenant ({{ $tenants->count() }})
+                </button>
+                <button @click="selectedFilter = 'Active'" :class="selectedFilter === 'Active' ? 'bg-emerald-600 text-white font-semibold shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400'" class="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs transition duration-200">
+                    <span class="h-2 w-2 rounded-full bg-emerald-400"></span> Aktif & DNS Ready ({{ $tenants->where('status', 'Active')->count() }})
+                </button>
+                <button @click="selectedFilter = 'Deploying'" :class="selectedFilter === 'Deploying' ? 'bg-amber-500 text-white font-semibold shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400'" class="flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs transition duration-200">
+                    <span class="h-2 w-2 rounded-full bg-amber-400 animate-pulse"></span> Deploying & Sync ({{ $tenants->where('status', 'Deploying')->count() }})
+                </button>
             </div>
-            <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-slate-800/80 dark:bg-slate-900">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Master Node Clusters</span>
-                <h3 class="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1">{{ $nodes->count() }} <span class="text-xs font-medium text-slate-400">Connected</span></h3>
-            </div>
-            <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-slate-800/80 dark:bg-slate-900">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Cloudflare Auto-Sync</span>
-                <h3 class="text-2xl font-black text-orange-500 mt-1">Ready <span class="text-xs font-medium text-slate-400">API Gateway</span></h3>
-            </div>
-            <div class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs dark:border-slate-800/80 dark:bg-slate-900">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Database Backend</span>
-                <h3 class="text-2xl font-black text-emerald-600 dark:text-emerald-400 uppercase mt-1">{{ config('database.default') }}</h3>
+
+            <div class="relative min-w-[280px]">
+                <input type="text" x-model="searchQuery" placeholder="Cari tenant, domain, atau cluster IP..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-4 text-xs text-slate-800 focus:border-indigo-500 focus:bg-white focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white">
+                <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </div>
         </div>
 
+        <!-- Tenant Table -->
+        <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-slate-800/80 dark:bg-slate-900 mb-10">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-200/80 bg-slate-50/70 text-xs uppercase text-slate-500 dark:border-slate-800/80 dark:bg-slate-950/50 dark:text-slate-400 font-semibold tracking-wider">
+                            <th class="px-6 py-4">Nama Tenant & Domain Utama</th>
+                            <th class="px-6 py-4">Lokasi Server Master Node</th>
+                            <th class="px-6 py-4">Otomasi DNS Cloudflare</th>
+                            <th class="px-6 py-4">Status & Resource</th>
+                            <th class="px-6 py-4 text-right">Aksi & Kendali</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        <template x-for="item in tenants" :key="item.id">
+                            <tr 
+                                x-show="(selectedFilter === 'all' || item.status === selectedFilter) && (searchQuery === '' || item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.domain.toLowerCase().includes(searchQuery.toLowerCase()) || item.server.toLowerCase().includes(searchQuery.toLowerCase()))"
+                                class="group transition duration-150 hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
+                            >
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3.5">
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-bold shadow-sm transition-transform group-hover:scale-105 duration-200 text-sm"
+                                            :class="item.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 dark:text-indigo-400' : (item.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-purple-500/10 text-purple-600 border border-purple-500/20')"
+                                            x-text="item.avatar"
+                                        ></div>
+                                        <div>
+                                            <span class="block font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition" x-text="item.name"></span>
+                                            <a :href="'http://' + item.domain" target="_blank" class="text-xs text-indigo-600 hover:underline dark:text-indigo-400 flex items-center gap-1 mt-0.5 font-mono">
+                                                <span x-text="item.domain"></span>
+                                                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                            </a>
+                                            <div class="mt-1.5 flex flex-wrap items-center gap-1.5" x-show="item.remoteId || item.dbName">
+                                                <span x-show="item.remoteId" class="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold font-mono text-slate-700 dark:bg-slate-800/80 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700" x-text="'ID: ' + item.remoteId"></span>
+                                                <span x-show="item.dbName" class="inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold font-mono text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-500/20" x-text="'DB: ' + item.dbName"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
 
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700">
+                                        <svg class="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
+                                        <span x-text="item.server"></span>
+                                    </span>
+                                    <span class="block text-[11px] font-mono text-slate-400 mt-1" x-text="item.serverIp"></span>
+                                </td>
+
+                                <td class="px-6 py-4">
+                                    <button @click="openNSManager(item)" class="group flex items-center gap-2.5 text-left transition hover:opacity-85">
+                                        <span class="relative flex h-2.5 w-2.5 shrink-0">
+                                            <span x-show="item.cfZoneStatus !== 'active' && !item.cfStatus.includes('Orange')" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-2.5 w-2.5" :class="item.cfZoneStatus === 'active' ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : (item.cfStatus.includes('Orange') ? 'bg-orange-500' : 'bg-amber-400')"></span>
+                                        </span>
+                                        <div>
+                                            <span class="text-xs font-bold underline decoration-dotted underline-offset-4 block transition" :class="item.cfZoneStatus === 'active' ? 'text-emerald-600 dark:text-emerald-400' : (item.cfStatus.includes('Orange') ? 'text-orange-600 dark:text-orange-400' : 'text-amber-600 dark:text-amber-400')" x-text="item.cfZoneStatus === 'active' ? 'Active (WAF Protected)' : (item.cfStatus.includes('Orange') ? 'Proxied (Orange Cloud)' : 'Pending Name Server')"></span>
+                                            <span class="text-[10px] font-semibold text-slate-400 group-hover:text-indigo-500 transition block mt-0.5">Klik untuk Info NS & Cek Live ➔</span>
+                                        </div>
+                                    </button>
+                                </td>
+
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-bold"
+                                        :class="item.status === 'Active' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'"
+                                    >
+                                        <span class="h-1.5 w-1.5 rounded-full" :class="item.status === 'Active' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'"></span>
+                                        <span x-text="item.status"></span>
+                                    </span>
+                                    <div class="text-[11px] text-slate-400 mt-1 font-mono" x-text="'CPU: ' + item.cpu + ' • Disk: ' + item.storage"></div>
+                                </td>
+
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-1.5">
+                                        <button @click="openDetailManager(item)" class="rounded-xl bg-emerald-50 p-1.5 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 transition shadow-xs" title="Lihat Detail via API">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                        </button>
+                                        <button @click="openNSManager(item)" class="rounded-xl bg-orange-50 p-1.5 text-orange-600 hover:bg-orange-100 dark:bg-orange-500/10 dark:text-orange-400 dark:hover:bg-orange-500/20 transition shadow-xs" title="Lihat Name Server (NS) & Cek Koneksi">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
+                                        </button>
+                                        <button @click="openDomainManager(item)" class="rounded-xl bg-slate-100 p-1.5 text-amber-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-amber-500 dark:hover:bg-slate-700/80 transition shadow-xs" title="Kelola DNS & Domain Alias">
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                                        </button>
+                                        <button @click="openDeleteManager(item)" class="rounded-xl p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 transition" title="Nonaktifkan & Hapus Tenant"><svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <!-- Modal 1: Deploy Tenant Baru -->
         <div x-show="openModalCreate" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs" style="display: none;">
@@ -347,6 +460,108 @@
                                 <span>Cek & Verifikasi Live Status ⚡</span>
                             </button>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal 5: Detail Tenant dari API -->
+        <div x-show="openModalDetail" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" style="display: none;">
+            <div @click.outside="openModalDetail = false" x-transition.scale.95 class="w-full max-w-2xl overflow-hidden rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm">
+                            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 01-18 0 9 9 0 0118 0z" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-900 dark:text-white" x-text="'Detail Tenant: ' + (activeTenant?.name || '')"></h3>
+                            <p class="text-xs text-slate-500">Live Data Fetch dari Master Tenant Server (aaPanel Stats)</p>
+                        </div>
+                    </div>
+                    <button @click="openModalDetail = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                </div>
+
+                <div class="mt-5 min-h-[250px] relative">
+                    <!-- Loading State -->
+                    <div x-show="isLoadingDetail" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-900/80 z-10 backdrop-blur-xs">
+                        <svg class="h-8 w-8 animate-spin text-emerald-500 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="text-sm font-semibold text-slate-600 dark:text-slate-400 animate-pulse">Menarik data dari API Master Node...</p>
+                    </div>
+
+                    <!-- Content State -->
+                    <div x-show="!isLoadingDetail && activeTenantDetail" style="display: none;">
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="rounded-xl bg-slate-50 p-4 border border-slate-200/60 dark:bg-slate-950 dark:border-slate-800">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">ID Tenant (Remote)</span>
+                                <span class="text-sm font-mono font-bold text-slate-900 dark:text-white" x-text="activeTenantDetail?.id"></span>
+                            </div>
+                            <div class="rounded-xl bg-slate-50 p-4 border border-slate-200/60 dark:bg-slate-950 dark:border-slate-800">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Nama Database Backend</span>
+                                <span class="text-sm font-mono font-bold text-emerald-600 dark:text-emerald-400" x-text="activeTenantDetail?.database"></span>
+                            </div>
+                        </div>
+
+                        <!-- Stats from aaPanel -->
+                        <div x-show="activeTenantDetail?.stats" class="mb-6">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-3 flex items-center gap-2">
+                                <svg class="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                                Live Statistik Server aaPanel
+                            </span>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div class="rounded-xl p-3 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-center">
+                                    <span class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Total Users</span>
+                                    <span class="block text-lg font-black text-slate-900 dark:text-white" x-text="activeTenantDetail?.stats?.users_count"></span>
+                                </div>
+                                <div class="rounded-xl p-3 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm text-center">
+                                    <span class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Transactions</span>
+                                    <span class="block text-lg font-black text-indigo-600 dark:text-indigo-400" x-text="activeTenantDetail?.stats?.transactions_count"></span>
+                                </div>
+                                <div class="col-span-2 rounded-xl p-3 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                                    <span class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Financial Metrics (IDR)</span>
+                                    <div class="flex items-center justify-between mt-1">
+                                        <div>
+                                            <span class="block text-[9px] text-slate-400">First Deposit</span>
+                                            <span class="block text-sm font-bold text-emerald-600 dark:text-emerald-400" x-text="new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(activeTenantDetail?.stats?.first_deposit_amount || 0)"></span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span class="block text-[9px] text-slate-400">Re-deposit</span>
+                                            <span class="block text-sm font-bold text-emerald-600 dark:text-emerald-400" x-text="new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(activeTenantDetail?.stats?.redeposit_amount || 0)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Domains List -->
+                        <div x-show="activeTenantDetail?.domains?.length > 0">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-2">Registered Domains</span>
+                            <div class="max-h-40 overflow-y-auto space-y-2 pr-2">
+                                <template x-for="dom in activeTenantDetail?.domains" :key="dom.domain">
+                                    <div class="flex items-center justify-between rounded-xl bg-slate-50 p-3 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800 font-mono text-xs">
+                                        <div class="flex items-center gap-2">
+                                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                                            <span class="font-bold text-slate-800 dark:text-slate-200" x-text="dom.domain"></span>
+                                        </div>
+                                        <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                                              :class="dom.is_suspended ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'"
+                                              x-text="dom.is_suspended ? 'Suspended' : 'Active'"></span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                            <button @click="openModalDetail = false" type="button" class="rounded-xl bg-slate-900 px-6 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 transition">Tutup Detail</button>
+                        </div>
+                    </div>
+                    
+                    <div x-show="!isLoadingDetail && !activeTenantDetail" style="display: none;" class="py-10 text-center">
+                        <svg class="h-12 w-12 mx-auto text-rose-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <p class="text-sm font-bold text-slate-800 dark:text-white">Gagal Mengambil Data API</p>
+                        <p class="text-xs text-slate-500 mt-1">Pastikan server master dalam keadaan aktif atau remote ID valid.</p>
                     </div>
                 </div>
             </div>
