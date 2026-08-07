@@ -128,4 +128,20 @@ class TenantController extends Controller
 
         return redirect()->back()->with('error', $res['error'] ?? "Gagal memeriksa status koneksi Cloudflare untuk domain {$tenant->domain}.");
     }
+
+    public function updateConfig(Request $request, Tenant $tenant, RemoteProvisioningService $service)
+    {
+        $validated = $request->validate([
+            'settings' => 'nullable|array',
+            'api_configs' => 'nullable|array',
+        ]);
+
+        $result = $service->updateTenantConfig($tenant, $validated);
+
+        if ($result['success']) {
+            return response()->json(['success' => true, 'message' => 'Konfigurasi berhasil disimpan di Master Node!']);
+        }
+
+        return response()->json(['success' => false, 'error' => $result['error'] ?? 'Gagal menyimpan konfigurasi'], 500);
+    }
 }

@@ -65,6 +65,11 @@ class RemoteProvisioningService
                     $createdAt = $item['created_at'] ?? null;
                     $dbName = $item['database'] ?? ('giga_' . $remoteId);
                     $domains = $item['domains'] ?? [];
+                    
+                    $usersCount = $item['users_count'] ?? 0;
+                    $transactionsCount = $item['transactions_count'] ?? 0;
+                    $firstDepositAmount = $item['first_deposit_amount'] ?? 0;
+                    $redepositAmount = $item['redeposit_amount'] ?? 0;
 
                     if (!empty($domains)) {
                         $mainDomainObj = $domains[0];
@@ -87,6 +92,10 @@ class RemoteProvisioningService
                                 'cpu' => mt_rand(10, 35) . '%',
                                 'storage' => mt_rand(5, 45) . ' GB / 100 GB',
                                 'users' => mt_rand(5, 50),
+                                'users_count' => $usersCount,
+                                'transactions_count' => $transactionsCount,
+                                'first_deposit_amount' => $firstDepositAmount,
+                                'redeposit_amount' => $redepositAmount,
                             ]
                         );
 
@@ -427,6 +436,73 @@ class RemoteProvisioningService
                 'response_body' => json_encode(['error' => $e->getMessage()], JSON_PRETTY_PRINT),
             ]);
             return false;
+        }
+    }
+
+    public function updateTenantConfig(Tenant $tenant, array $configData): array
+    {
+        $node = $tenant->clusterNode;
+        if (!$node) {
+            return ['success' => false, 'error' => 'Master Node not found'];
+        }
+
+        $baseUrl = rtrim($node->endpoint_url, '/');
+        $remoteId = $tenant->remote_tenant_id ?: ('t-' . $tenant->id);
+
+        if (str_ends_with($baseUrl, '/api/central/v1')) {
+            $endpoint = $baseUrl . '/tenants/' . urlencode($remoteId) . '/config';
+        } elseif (str_contains($baseUrl, '/api/')) {
+            $endpoint = preg_replace('#/api/.*$#', '/api/central/v1/tenants/' . urlencode($remoteId) . '/config', $baseUrl);
+        } else {
+            $endpoint = $baseUrl . '/api/central/v1/tenants/' . urlencode($remoteId) . '/config';
+        }
+
+        $startTime = microtime(true);
+
+        try {
+            $response = Http::withHeaders([
+                'X-API-Key' => $node->api_secret,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])
+            ->timeout(30)
+            ->put($endpoint, $configData);
+
+            $latency = round((microtime(true) - $startTime) * 1000) . 'ms';
+            $statusCode = $response->status();
+            $statusText = $statusCode . ' ' . ($response->successful() ? 'Config Updated' : 'HTTP Error');
+
+            ApiLog::create([
+                'method' => 'PUT',
+                'endpoint' => $endpoint,
+                'cluster_name' => $node->name,
+                'tenant_name' => $tenant->name . ' (Update Config)',
+                'status_code' => $statusCode,
+                'status_text' => $statusText,
+                'latency_ms' => $latency,
+                'request_body' => json_encode($configData, JSON_PRETTY_PRINT),
+                'response_body' => json_decode($response->body(), true) ? json_encode($response->json(), JSON_PRETTY_PRINT) : $response->body(),
+            ]);
+
+            if ($response->successful()) {
+                return ['success' => true];
+            }
+
+            return ['success' => false, 'error' => $response->json('message') ?? 'HTTP Error ' . $statusCode];
+        } catch (\Exception $e) {
+            $latency = round((microtime(true) - $startTime) * 1000) . 'ms';
+            ApiLog::create([
+                'method' => 'PUT',
+                'endpoint' => $endpoint,
+                'cluster_name' => $node->name,
+                'tenant_name' => $tenant->name . ' (Update Config Error)',
+                'status_code' => 500,
+                'status_text' => '500 Connection Failed',
+                'latency_ms' => $latency,
+                'request_body' => json_encode($configData, JSON_PRETTY_PRINT),
+                'response_body' => json_encode(['error' => $e->getMessage()], JSON_PRETTY_PRINT),
+            ]);
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 }

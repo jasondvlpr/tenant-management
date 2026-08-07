@@ -21,6 +21,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
     Route::post('/tenants/sync', [TenantController::class, 'sync'])->name('tenants.sync');
     Route::post('/tenants/{tenant}/check-cloudflare', [TenantController::class, 'checkCloudflareStatus'])->name('tenants.check-cloudflare');
+    Route::put('/tenants/{tenant}/config', [TenantController::class, 'updateConfig'])->name('tenants.update-config');
     Route::delete('/tenants/{tenant}', [TenantController::class, 'destroy'])->name('tenants.destroy');
 
     // Server Master Nodes

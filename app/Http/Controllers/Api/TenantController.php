@@ -43,6 +43,9 @@ class TenantController extends Controller
         if ($request->boolean('with_stats')) {
             $queryParams['with_stats'] = 'true';
         }
+        if ($request->boolean('with_config')) {
+            $queryParams['with_config'] = 'true';
+        }
 
         try {
             $response = Http::withHeaders([

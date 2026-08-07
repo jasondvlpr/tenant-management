@@ -34,6 +34,10 @@
                 'checkCfUrl' => route('tenants.check-cloudflare', $t->id),
                 'autoDns' => $t->auto_dns,
                 'aliases' => $t->aliases->pluck('alias')->toArray(),
+                'usersCount' => $t->users_count,
+                'transactionsCount' => $t->transactions_count,
+                'firstDepositAmount' => $t->first_deposit_amount,
+                'redepositAmount' => $t->redeposit_amount,
                 'deleteUrl' => route('tenants.destroy', $t->id)
             ];
         })->toJson() }},
@@ -59,7 +63,7 @@
             this.isLoadingDetail = true;
             this.openModalDetail = true;
             
-            fetch('/api/central/v1/tenants/' + (tenant.remoteId || tenant.id) + '?with_stats=true')
+            fetch('/api/central/v1/tenants/' + (tenant.remoteId || tenant.id) + '?with_stats=true&with_config=true')
                 .then(res => res.json())
                 .then(data => {
                     if(data.status === 'success') {
@@ -71,6 +75,47 @@
                     this.isLoadingDetail = false;
                     console.error(err);
                 });
+        },
+        openModalConfig: false,
+        activeConfig: { settings: {}, api_configs: { game_api: {}, payment_api: {} } },
+        isSavingConfig: false,
+        openConfigManager() {
+            let conf = this.activeTenantDetail ? this.activeTenantDetail.config : null;
+            if (Array.isArray(conf)) conf = {};
+            else if (typeof conf === 'string') { try { conf = JSON.parse(conf); } catch(e) { conf = {}; } }
+            else if (conf) conf = JSON.parse(JSON.stringify(conf));
+            else conf = {};
+
+            if (!conf.settings || Array.isArray(conf.settings)) conf.settings = {};
+            if (!conf.api_configs || Array.isArray(conf.api_configs)) conf.api_configs = {};
+            if (!conf.api_configs.game_api || Array.isArray(conf.api_configs.game_api)) conf.api_configs.game_api = {};
+            if (!conf.api_configs.payment_api || Array.isArray(conf.api_configs.payment_api)) conf.api_configs.payment_api = {};
+
+            this.activeConfig = conf;
+            this.openModalConfig = true;
+        },
+        saveConfig() {
+            this.isSavingConfig = true;
+            fetch('/tenants/' + this.activeTenant.id + '/config', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(this.activeConfig)
+            }).then(res => res.json()).then(data => {
+                this.isSavingConfig = false;
+                if(data.success) {
+                    alert('Konfigurasi berhasil disimpan!');
+                    this.openModalConfig = false;
+                    this.openModalDetail = false;
+                } else {
+                    alert('Gagal: ' + data.error);
+                }
+            }).catch(err => {
+                this.isSavingConfig = false;
+                alert('Terjadi kesalahan sistem.');
+            });
         }
     }">
 
@@ -162,7 +207,8 @@
                             <th class="px-6 py-4">Nama Tenant & Domain Utama</th>
                             <th class="px-6 py-4">Lokasi Server Master Node</th>
                             <th class="px-6 py-4">Otomasi DNS Cloudflare</th>
-                            <th class="px-6 py-4">Status & Resource</th>
+                            <th class="px-6 py-4">Status</th>
+                            <th class="px-6 py-4">Statistik Transaksi</th>
                             <th class="px-6 py-4 text-right">Aksi & Kendali</th>
                         </tr>
                     </thead>
@@ -220,7 +266,21 @@
                                         <span class="h-1.5 w-1.5 rounded-full" :class="item.status === 'Active' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'"></span>
                                         <span x-text="item.status"></span>
                                     </span>
-                                    <div class="text-[11px] text-slate-400 mt-1 font-mono" x-text="'CPU: ' + item.cpu + ' • Disk: ' + item.storage"></div>
+                                </td>
+
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col gap-1.5">
+                                        <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                                            <span x-text="'Users: ' + item.usersCount"></span>
+                                            <span class="text-slate-300 dark:text-slate-600">|</span>
+                                            <span x-text="'Trx: ' + item.transactionsCount"></span>
+                                        </div>
+                                        <div class="text-[11px] font-mono font-semibold">
+                                            <span class="text-emerald-600 dark:text-emerald-400" x-text="'F.Dep: Rp ' + new Intl.NumberFormat('id-ID').format(item.firstDepositAmount)"></span>
+                                            <span class="text-slate-300 dark:text-slate-600 mx-1">•</span>
+                                            <span class="text-indigo-600 dark:text-indigo-400" x-text="'Re.Dep: Rp ' + new Intl.NumberFormat('id-ID').format(item.redepositAmount)"></span>
+                                        </div>
+                                    </div>
                                 </td>
 
                                 <td class="px-6 py-4 text-right">
@@ -553,7 +613,8 @@
                             </div>
                         </div>
 
-                        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <button @click="openConfigManager()" type="button" class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-indigo-500 shadow-md transition">Edit Konfigurasi (Config)</button>
                             <button @click="openModalDetail = false" type="button" class="rounded-xl bg-slate-900 px-6 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 transition">Tutup Detail</button>
                         </div>
                     </div>
@@ -563,6 +624,106 @@
                         <p class="text-sm font-bold text-slate-800 dark:text-white">Gagal Mengambil Data API</p>
                         <p class="text-xs text-slate-500 mt-1">Pastikan server master dalam keadaan aktif atau remote ID valid.</p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal 6: Edit Config -->
+        <div x-show="openModalConfig" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" style="display: none;">
+            <div @click.outside="openModalConfig = false" x-transition.scale.95 class="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 shadow-sm">
+                            <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-900 dark:text-white" x-text="'Konfigurasi: ' + (activeTenant?.name || '')"></h3>
+                            <p class="text-xs text-slate-500">Edit pengaturan situs dan integrasi API.</p>
+                        </div>
+                    </div>
+                    <button @click="openModalConfig = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                </div>
+
+                <div class="mt-5 space-y-6">
+                    <!-- General Settings -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-slate-500 mb-3 border-b border-slate-100 dark:border-slate-800 pb-1">Pengaturan Umum (Settings)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Nama Situs</label>
+                                <input type="text" x-model="activeConfig.settings.site_name" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Maintenance Mode</label>
+                                <select x-model="activeConfig.settings.maintenance_mode" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                                    <option value="0">Normal (Nonaktif)</option>
+                                    <option value="1">Maintenance (Aktif)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Minimal Deposit</label>
+                                <input type="number" x-model="activeConfig.settings.min_deposit" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Minimal Withdraw</label>
+                                <input type="number" x-model="activeConfig.settings.min_withdraw" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Alternatif URL (Opsional)</label>
+                                <input type="text" x-model="activeConfig.settings.alt_url" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">AMP URL (Opsional)</label>
+                                <input type="text" x-model="activeConfig.settings.amp_url" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API Configs: Game API -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-slate-500 mb-3 border-b border-slate-100 dark:border-slate-800 pb-1">Integrasi Game API</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">API URL</label>
+                                <input type="text" x-model="activeConfig.api_configs.game_api.api_url" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Agent Code</label>
+                                <input type="text" x-model="activeConfig.api_configs.game_api.agent_code" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Agent Token</label>
+                                <input type="text" x-model="activeConfig.api_configs.game_api.agent_token" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API Configs: Payment API -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-slate-500 mb-3 border-b border-slate-100 dark:border-slate-800 pb-1">Integrasi Payment API</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">API URL</label>
+                                <input type="text" x-model="activeConfig.api_configs.payment_api.api_url" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Agent Code</label>
+                                <input type="text" x-model="activeConfig.api_configs.payment_api.agent_code" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-600 dark:text-slate-400 mb-1">Agent Token</label>
+                                <input type="text" x-model="activeConfig.api_configs.payment_api.agent_token" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 font-mono focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
+                    <button @click="openModalConfig = false" type="button" class="rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Batal</button>
+                    <button @click="saveConfig()" :disabled="isSavingConfig" :class="isSavingConfig ? 'opacity-75 cursor-wait' : 'hover:bg-indigo-500'" class="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition flex items-center justify-center min-w-[150px]">
+                        <svg x-show="isSavingConfig" style="display: none;" class="mr-2 h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span x-text="isSavingConfig ? 'Menyimpan...' : 'Simpan Konfigurasi'"></span>
+                    </button>
                 </div>
             </div>
         </div>
