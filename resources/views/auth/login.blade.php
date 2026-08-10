@@ -108,13 +108,7 @@
                 </button>
             </form>
 
-            <div class="mt-8 pt-6 border-t border-slate-800/80 text-center">
-                <div class="text-[11px] text-slate-500 font-mono space-y-1">
-                    <div>Kredensial Bawaan Sistem (Seeded MySQL):</div>
-                    <div class="text-indigo-400">Username: <strong class="text-white">admin</strong> <span class="text-slate-500">|</span> Email: <strong class="text-white">admin@master-hub.com</strong></div>
-                    <div>Kata Sandi (Password): <strong class="text-slate-300">password</strong></div>
-                </div>
-            </div>
+
         </div>
 
         <p class="mt-8 text-center text-xs text-slate-600 font-mono">
