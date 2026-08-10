@@ -5,6 +5,7 @@ use App\Http\Controllers\CloudflareController;
 use App\Http\Controllers\ClusterNodeController;
 use App\Http\Controllers\DomainAliasController;
 use App\Http\Controllers\LogController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QueueController;
 use App\Http\Controllers\TenantController;
 use Illuminate\Support\Facades\Route;
@@ -49,4 +50,8 @@ Route::middleware('auth')->group(function () {
     // Queue Daemon & Workers
     Route::get('/queues', [QueueController::class, 'index'])->name('queues.index');
     Route::post('/queues/restart', [QueueController::class, 'restart'])->name('queues.restart');
+
+    // Profile
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 });

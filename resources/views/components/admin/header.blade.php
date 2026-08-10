@@ -57,7 +57,7 @@
                     class="flex items-center gap-3 rounded-xl py-1 pl-2 pr-3 transition hover:bg-slate-100 dark:hover:bg-slate-800/60"
                 >
                     <div class="relative h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 p-[2px]">
-                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Admin" class="h-full w-full rounded-full bg-slate-900 object-cover">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ urlencode(auth()->user()->name ?? 'Felix') }}" alt="Admin" class="h-full w-full rounded-full bg-slate-900 object-cover">
                         <span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"></span>
                     </div>
                     <div class="hidden text-left sm:block">
@@ -84,7 +84,7 @@
                     </div>
                     <ul class="py-1 text-sm text-slate-700 dark:text-slate-300">
                         <li>
-                            <a href="#" class="flex items-center gap-2.5 rounded-xl px-3 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            <a href="{{ route('profile.index') }}" class="flex items-center gap-2.5 rounded-xl px-3 py-2 transition hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300">
                                 <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                                 Profil Akun
                             </a>
