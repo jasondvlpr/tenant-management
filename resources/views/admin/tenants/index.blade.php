@@ -30,6 +30,8 @@
                 'cfNameServers' => $t->domains[0]['cf_nameservers'] ?? [],
                 'checkCfUrl' => route('tenants.check-cloudflare', $t->id),
                 'aliases' => collect($t->domains ?? [])->skip(1)->pluck('domain')->toArray(),
+                'firstDepositAmount' => $t->first_deposit_amount,
+                'redepositAmount' => $t->redeposit_amount,
                 'deleteUrl' => route('tenants.destroy', $t->id)
             ];
         })->toJson() }},
@@ -128,7 +130,58 @@
             </div>
         </div>
 
-
+        <!-- Tabel Tenant Tanpa Transaksi -->
+        <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-xs dark:border-slate-800/80 dark:bg-slate-900 mb-8" x-show="tenants.filter(t => t.firstDepositAmount == 0 && t.redepositAmount == 0).length > 0">
+            <div class="bg-slate-50/50 dark:bg-slate-950/30 px-5 py-4 border-b border-slate-200/80 dark:border-slate-800/60 flex items-center justify-between">
+                <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </span>
+                    Tenant Belum Ada Transaksi (F.Dep: Rp 0 &bull; Re.Dep: Rp 0)
+                </h2>
+                <span class="rounded-lg bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700 dark:bg-orange-500/20 dark:text-orange-400" x-text="tenants.filter(t => t.firstDepositAmount == 0 && t.redepositAmount == 0).length + ' Tenant'"></span>
+            </div>
+            <div class="overflow-x-auto max-h-[350px] overflow-y-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead class="sticky top-0 z-10 bg-white dark:bg-slate-900 shadow-sm shadow-slate-200/50 dark:shadow-slate-800/50">
+                        <tr class="border-b border-slate-200/80 text-[11px] uppercase text-slate-500 dark:border-slate-800/60 dark:text-slate-400 font-bold tracking-wider">
+                            <th class="px-5 py-3.5">Nama Tenant & Domain</th>
+                            <th class="px-5 py-3.5">ID / Database</th>
+                            <th class="px-5 py-3.5">Server Node</th>
+                            <th class="px-5 py-3.5 text-right">Nilai Depo</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                        <template x-for="item in tenants.filter(t => t.firstDepositAmount == 0 && t.redepositAmount == 0)" :key="'notx-'+item.id">
+                            <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                                <td class="px-5 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-bold shadow-sm text-xs"
+                                            :class="item.color === 'indigo' ? 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20 dark:text-indigo-400' : (item.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-purple-500/10 text-purple-600 border border-purple-500/20')"
+                                            x-text="item.avatar"
+                                        ></div>
+                                        <div>
+                                            <span class="block font-bold text-slate-800 dark:text-slate-200 text-sm" x-text="item.name"></span>
+                                            <a :href="'http://' + item.domain" target="_blank" class="text-[11px] text-indigo-600 hover:underline dark:text-indigo-400 font-mono mt-0.5 inline-block" x-text="item.domain"></a>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-3">
+                                    <span class="block text-xs font-mono text-slate-600 dark:text-slate-400" x-text="item.remoteId"></span>
+                                    <span class="block text-[10px] font-mono text-slate-400 mt-0.5" x-text="'DB: ' + item.dbName"></span>
+                                </td>
+                                <td class="px-5 py-3">
+                                    <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300" x-text="item.server"></span>
+                                </td>
+                                <td class="px-5 py-3 text-right">
+                                    <span class="block text-xs font-bold text-slate-400 line-through decoration-slate-300 dark:decoration-slate-600">Rp 0</span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <!-- Modal 1: Deploy Tenant Baru -->
         <div x-show="openModalCreate" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs" style="display: none;">
