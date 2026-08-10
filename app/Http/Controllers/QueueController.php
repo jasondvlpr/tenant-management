@@ -31,13 +31,7 @@ class QueueController extends Controller
             }
         }
 
-        // Keep mock UI entries when queue is empty so user sees operational visual proof
-        if (empty($jobs)) {
-            $jobs = [
-                [ 'id' => 'job_99812', 'name' => 'App\\Jobs\\ProvisionTenantJob', 'target' => 'Tokoko Commerce (tokoko-superapp.id)', 'cluster' => 'Cluster SG-Main', 'attempt' => 1, 'maxAttempts' => 3, 'status' => 'Completed Success', 'runtime' => '1.4s', 'icon' => 'check' ],
-                [ 'id' => 'job_99811', 'name' => 'App\\Jobs\\SyncCloudflareDnsJob', 'target' => 'www.tokoko-superapp.id (CNAME)', 'cluster' => 'Cloudflare Zone API', 'attempt' => 1, 'maxAttempts' => 5, 'status' => 'Completed Success', 'runtime' => '0.8s', 'icon' => 'check' ],
-            ];
-        }
+
 
         return view('admin.queues.index', compact('jobs'));
     }
