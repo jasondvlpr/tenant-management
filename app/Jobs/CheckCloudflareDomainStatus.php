@@ -27,8 +27,16 @@ class CheckCloudflareDomainStatus implements ShouldQueue
      */
     public function handle(CloudflareDnsService $cfService): void
     {
+        $domains = $this->tenant->domains ?? [];
+        if (empty($domains)) {
+            return;
+        }
+        
+        $mainDomainIndex = 0;
+        $domainName = $domains[$mainDomainIndex]['domain'];
+        
         // 1. Periksa status zone domain di Cloudflare
-        $result = $cfService->checkZoneStatus(null, $this->tenant->domain);
+        $result = $cfService->checkZoneStatus(null, $domainName);
 
         if ($result['success'] ?? false) {
             $status = $result['status'] ?? 'pending';
@@ -43,14 +51,14 @@ class CheckCloudflareDomainStatus implements ShouldQueue
                 default => 'Unknown (' . $status . ')',
             };
 
-            $this->tenant->update([
-                'cf_status' => $displayStatus,
-                'cf_zone_id' => $result['id'] ?? null,
-                'cf_zone_status' => strtolower($status),
-                'cf_nameservers' => $result['name_servers'] ?? null
-            ]);
+            $domains[$mainDomainIndex]['cf_status'] = $displayStatus;
+            $domains[$mainDomainIndex]['cf_zone_id'] = $result['id'] ?? null;
+            $domains[$mainDomainIndex]['cf_zone_status'] = strtolower($status);
+            $domains[$mainDomainIndex]['cf_nameservers'] = $result['name_servers'] ?? null;
+
+            $this->tenant->update(['domains' => $domains]);
         } else {
-            Log::warning("Gagal cek status CF untuk tenant {$this->tenant->domain}: " . ($result['error'] ?? 'Unknown Error'));
+            Log::warning("Gagal cek status CF untuk tenant {$domainName}: " . ($result['error'] ?? 'Unknown Error'));
         }
     }
 }

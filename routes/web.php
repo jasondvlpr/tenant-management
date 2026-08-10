@@ -21,7 +21,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/tenants', [TenantController::class, 'store'])->name('tenants.store');
     Route::post('/tenants/sync', [TenantController::class, 'sync'])->name('tenants.sync');
     Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('tenants.show');
-    Route::post('/tenants/{tenant}/primary-domain', [TenantController::class, 'setPrimaryDomain'])->name('tenants.set-primary');
     Route::post('/tenants/{tenant}/check-cloudflare', [TenantController::class, 'checkCloudflareStatus'])->name('tenants.check-cloudflare');
     Route::put('/tenants/{tenant}/config', [TenantController::class, 'updateConfig'])->name('tenants.update-config');
     Route::delete('/tenants/{tenant}', [TenantController::class, 'destroy'])->name('tenants.destroy');
@@ -33,8 +32,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/servers/{server}', [ClusterNodeController::class, 'destroy'])->name('servers.destroy');
 
     // Domain Alias & Virtual Hosts
-    Route::get('/domains', [DomainAliasController::class, 'index'])->name('domains.index');
     Route::post('/domains', [DomainAliasController::class, 'store'])->name('domains.store');
+    Route::post('/tenants/{tenant}/domains/{domainId}/subdomains', [DomainAliasController::class, 'addSubdomain'])->name('domains.subdomains.store');
+    Route::delete('/tenants/{tenant}/domains/{domainId}/subdomains/{subdomain}', [DomainAliasController::class, 'destroySubdomain'])->name('domains.subdomains.destroy');
     Route::delete('/domains/{domain}', [DomainAliasController::class, 'destroy'])->name('domains.destroy');
 
     // Cloudflare DNS Control

@@ -33,13 +33,17 @@ class ProvisionTenantJob implements ShouldQueue
         // 1. Send instruction to Remote Server Node
         $success = $provisioningService->deployTenant($this->tenant);
 
-        // 2. If Auto DNS is set, register A/CNAME record to Cloudflare pointing to cluster endpoint/IP
-        if ($success && $this->tenant->auto_dns && $this->tenant->clusterNode) {
+        // 2. Register A/CNAME record to Cloudflare pointing to cluster endpoint/IP
+        $domains = $this->tenant->domains ?? [];
+        if ($success && !empty($domains) && $this->tenant->clusterNode) {
             $target = $this->tenant->clusterNode->ip_address;
             $type = filter_var($target, FILTER_VALIDATE_IP) ? 'A' : 'CNAME';
 
+            $domainName = $domains[0]['domain'];
+            $domains[0]['type'] = $type;
+
             $cfResult = $cfService->syncRecord(
-                $this->tenant->domain,
+                $domainName,
                 $type,
                 $target,
                 true,
@@ -47,15 +51,16 @@ class ProvisionTenantJob implements ShouldQueue
             );
 
             if (!empty($cfResult['success']) && $cfResult['success']) {
-                $this->tenant->update([
-                    'cf_status' => 'Proxied (Orange Cloud)',
-                    'cf_zone_id' => $cfResult['zone_id'] ?? null,
-                    'cf_zone_status' => $cfResult['zone_status'] ?? 'pending',
-                    'cf_nameservers' => $cfResult['name_servers'] ?? [],
-                ]);
-
+                $domains[0]['cf_status'] = 'Proxied (Orange Cloud)';
+                $domains[0]['cf_zone_id'] = $cfResult['zone_id'] ?? null;
+                $domains[0]['cf_zone_status'] = $cfResult['zone_status'] ?? 'pending';
+                $domains[0]['cf_nameservers'] = $cfResult['name_servers'] ?? [];
+                
+                $this->tenant->update(['domains' => $domains]);
             } else {
-                $this->tenant->update(['cf_status' => 'Sync Error (Check API Logs)', 'cf_zone_status' => 'error']);
+                $domains[0]['cf_status'] = 'Sync Error (Check API Logs)';
+                $domains[0]['cf_zone_status'] = 'error';
+                $this->tenant->update(['domains' => $domains]);
             }
         }
     }

@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\DomainAlias;
 use App\Services\CloudflareDnsService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -14,14 +13,14 @@ class SyncCloudflareDnsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public DomainAlias $alias;
+    public object $alias;
     public string $targetIp;
     public string $tenantName;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(DomainAlias $alias, string $targetIp, string $tenantName)
+    public function __construct(object $alias, string $targetIp, string $tenantName)
     {
         $this->alias = $alias;
         $this->targetIp = $targetIp;
@@ -34,11 +33,11 @@ class SyncCloudflareDnsJob implements ShouldQueue
     public function handle(CloudflareDnsService $cfService): void
     {
         $recordType = $this->alias->type === 'CNAME' ? 'CNAME' : 'A';
-        $target = $recordType === 'CNAME' ? $this->alias->tenant->domain : $this->targetIp;
+        $target = $recordType === 'CNAME' ? $this->alias->tenant->domains[0]['domain'] : $this->targetIp;
         $proxied = str_contains($this->alias->cf_status, 'Orange');
 
         $result = $cfService->syncRecord(
-            $this->alias->alias,
+            $this->alias->domain,
             $recordType,
             $target,
             $proxied,
@@ -46,7 +45,14 @@ class SyncCloudflareDnsJob implements ShouldQueue
         );
 
         if (!empty($result['success']) && $result['success']) {
-            $this->alias->update(['cf_status' => 'Proxied (Orange Cloud)', 'ssl' => 'Active (TLS 1.3)']);
+            $tenant = $this->alias->tenant;
+            $domains = $tenant->domains ?? [];
+            foreach ($domains as &$dom) {
+                if ($dom['id'] === $this->alias->id) {
+                    $dom['cf_status'] = 'Proxied (Orange Cloud)';
+                }
+            }
+            $tenant->update(['domains' => $domains]);
         }
     }
 }

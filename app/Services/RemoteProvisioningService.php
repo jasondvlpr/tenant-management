@@ -76,15 +76,13 @@ class RemoteProvisioningService
                         $mainDomain = $mainDomainObj['domain'];
                         $isSuspended = $mainDomainObj['is_suspended'] ?? false;
 
-                        // Create or update primary Tenant record
-                        $tenant = Tenant::firstOrNew(['domain' => $mainDomain]);
+                        $tenant = Tenant::firstOrNew(['remote_tenant_id' => $remoteId]);
                         if (!$tenant->exists) {
-                            $tenant->cf_status = 'Pending Check';
+                            $tenant->domains = [];
                         }
                         
                         $tenant->fill([
                             'cluster_node_id' => $node->id,
-                            'remote_tenant_id' => $remoteId,
                             'database_name' => $dbName,
                             'name' => 'Client ' . $remoteId,
                             'status' => $isSuspended ? 'Suspended' : 'Active',
@@ -99,22 +97,27 @@ class RemoteProvisioningService
                             'first_deposit_amount' => $firstDepositAmount,
                             'redeposit_amount' => $redepositAmount,
                         ]);
-                        $tenant->save();
-
-                        // If tenant has additional domains, map them to DomainAlias table
-                        if (count($domains) > 1) {
-                            for ($i = 1; $i < count($domains); $i++) {
-                                DomainAlias::updateOrCreate(
-                                    ['alias' => $domains[$i]['domain']],
-                                    [
-                                        'tenant_id' => $tenant->id,
-                                        'type' => 'CNAME',
-                                        'cf_status' => 'Proxied (Orange Cloud)',
-                                        'ssl' => 'Active (TLS 1.3)'
-                                    ]
-                                );
-                            }
+                        
+                        $mappedDomains = [];
+                        foreach ($domains as $index => $domData) {
+                            $mappedDomains[] = [
+                                'id' => uniqid(),
+                                'domain' => $domData['domain'],
+                                'subdomains' => [],
+                                'type' => $index === 0 ? 'A' : 'CNAME',
+                                'cf_status' => $index === 0 ? 'Pending Check' : 'Proxied (Orange Cloud)',
+                                'cf_zone_id' => null,
+                                'cf_zone_status' => 'pending',
+                                'cf_nameservers' => [],
+                            ];
                         }
+                        
+                        // Keep existing domains if already exists to prevent overwrite cf_status
+                        if (!$tenant->exists || empty($tenant->domains)) {
+                             $tenant->domains = $mappedDomains;
+                        }
+                        
+                        $tenant->save();
 
                         // Dispatch job to check CF status
                         \App\Jobs\CheckCloudflareDomainStatus::dispatch($tenant);
@@ -175,9 +178,12 @@ class RemoteProvisioningService
         $remoteId = $tenant->remote_tenant_id ?: ('STORE-' . strtoupper(substr(md5($tenant->id . time()), 0, 5)));
         
         // Exact Body Parameters required by Master aaPanel Server
+        $domains = $tenant->domains ?? [];
+        $firstDomain = !empty($domains) ? $domains[0]['domain'] : 'dummy.local';
+
         $payload = [
             'id' => $remoteId,
-            'domain' => $tenant->domain,
+            'domain' => $firstDomain,
         ];
 
         $startTime = microtime(true);
@@ -212,12 +218,17 @@ class RemoteProvisioningService
                 $responseData = $response->json('data', []);
                 $confirmedId = $responseData['id'] ?? $remoteId;
                 $confirmedDb = $responseData['database'] ?? ('giga_' . $confirmedId);
-                $confirmedDomain = $responseData['domain'] ?? $tenant->domain;
+                $confirmedDomain = $responseData['domain'] ?? $firstDomain;
+
+                $domains = $tenant->domains ?? [];
+                if (!empty($domains)) {
+                    $domains[0]['domain'] = $confirmedDomain;
+                }
 
                 $tenant->update([
                     'remote_tenant_id' => $confirmedId,
                     'database_name' => $confirmedDb,
-                    'domain' => $confirmedDomain,
+                    'domains' => $domains,
                     'status' => 'Active',
                 ]);
                 return true;
@@ -287,7 +298,7 @@ class RemoteProvisioningService
                 'status_code' => $statusCode,
                 'status_text' => $statusText,
                 'latency_ms' => $latency,
-                'request_body' => json_encode(['target_id' => $remoteId, 'domain' => $tenant->domain], JSON_PRETTY_PRINT),
+                'request_body' => json_encode(['target_id' => $remoteId], JSON_PRETTY_PRINT),
                 'response_body' => json_decode($responseBody, true) ? json_encode(json_decode($responseBody, true), JSON_PRETTY_PRINT) : $responseBody,
             ]);
 
@@ -312,7 +323,7 @@ class RemoteProvisioningService
         }
     }
 
-    public function addDomainAlias(DomainAlias $alias): bool
+    public function addDomainAlias(object $alias): bool
     {
         $tenant = $alias->tenant;
         $node = $tenant->clusterNode;
@@ -332,7 +343,7 @@ class RemoteProvisioningService
         }
 
         $payload = [
-            'domain' => $alias->alias
+            'domain' => $alias->domain
         ];
 
         $startTime = microtime(true);
@@ -354,7 +365,7 @@ class RemoteProvisioningService
                 'method' => 'POST',
                 'endpoint' => $endpoint,
                 'cluster_name' => $node->name,
-                'tenant_name' => $tenant->name . ' (Add Domain Alias: ' . $alias->alias . ')',
+                'tenant_name' => $tenant->name . ' (Add Domain Alias: ' . $alias->domain . ')',
                 'status_code' => $statusCode,
                 'status_text' => $statusText,
                 'latency_ms' => $latency,
@@ -380,7 +391,7 @@ class RemoteProvisioningService
         }
     }
 
-    public function removeDomainAlias(DomainAlias $alias): bool
+    public function removeDomainAlias(object $alias): bool
     {
         $tenant = $alias->tenant;
         $node = $tenant->clusterNode;
@@ -390,7 +401,7 @@ class RemoteProvisioningService
 
         $baseUrl = rtrim($node->endpoint_url, '/');
         $remoteId = $tenant->remote_tenant_id ?: ('t-' . $tenant->id);
-        $domainName = $alias->alias;
+        $domainName = $alias->domain;
 
         if (str_ends_with($baseUrl, '/api/central/v1')) {
             $endpoint = $baseUrl . '/tenants/' . urlencode($remoteId) . '/domains/' . urlencode($domainName);

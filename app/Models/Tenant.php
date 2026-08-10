@@ -13,16 +13,11 @@ class Tenant extends Model
 
     protected $casts = [
         'auto_dns' => 'boolean',
-        'cf_nameservers' => 'array',
+        'domains' => 'array',
     ];
 
     public function clusterNode()
     {
         return $this->belongsTo(ClusterNode::class, 'cluster_node_id');
-    }
-
-    public function aliases()
-    {
-        return $this->hasMany(DomainAlias::class);
     }
 }

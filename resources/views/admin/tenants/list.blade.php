@@ -18,7 +18,7 @@
                 'name' => $t->name,
                 'remoteId' => $t->remote_tenant_id,
                 'dbName' => $t->database_name,
-                'domain' => $t->domain,
+                'domain' => $t->domains[0]['domain'] ?? 'N/A',
                 'server' => $t->clusterNode ? $t->clusterNode->name : 'Unassigned',
                 'serverIp' => $t->clusterNode ? $t->clusterNode->ip_address : 'N/A',
                 'status' => $t->status,
@@ -27,13 +27,12 @@
                 'users' => $t->users,
                 'avatar' => $t->avatar,
                 'color' => $t->color,
-                'cfStatus' => $t->cf_status,
-                'cfZoneId' => $t->cf_zone_id,
-                'cfZoneStatus' => $t->cf_zone_status ?? 'pending',
-                'cfNameServers' => $t->cf_nameservers ?? [],
+                'cfStatus' => $t->domains[0]['cf_status'] ?? 'pending',
+                'cfZoneId' => $t->domains[0]['cf_zone_id'] ?? null,
+                'cfZoneStatus' => $t->domains[0]['cf_zone_status'] ?? 'pending',
+                'cfNameServers' => $t->domains[0]['cf_nameservers'] ?? [],
                 'checkCfUrl' => route('tenants.check-cloudflare', $t->id),
-                'autoDns' => $t->auto_dns,
-                'aliases' => $t->aliases->pluck('alias')->toArray(),
+                'aliases' => collect($t->domains ?? [])->skip(1)->pluck('domain')->toArray(),
                 'usersCount' => $t->users_count,
                 'transactionsCount' => $t->transactions_count,
                 'firstDepositAmount' => $t->first_deposit_amount,
@@ -238,7 +237,6 @@
                                     <div class="flex flex-col gap-1.5">
                                         <!-- Main Domain -->
                                         <div class="flex items-center gap-1">
-                                            <span class="px-1.5 py-0.5 rounded-[4px] bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 text-[9px] font-bold uppercase tracking-wider border border-indigo-200 dark:border-indigo-500/30">Utama</span>
                                             <a :href="'http://' + item.domain" target="_blank" class="text-xs text-indigo-600 hover:underline dark:text-indigo-400 font-mono flex items-center gap-1">
                                                 <span x-text="item.domain"></span>
                                                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
@@ -246,8 +244,7 @@
                                         </div>
                                         <!-- Aliases -->
                                         <template x-for="alias in item.aliases">
-                                            <div class="flex items-center gap-1">
-                                                <span class="px-1.5 py-0.5 rounded-[4px] bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 text-[9px] font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700">Alias</span>
+                                            <div class="flex items-center gap-1 mt-1">
                                                 <a :href="'http://' + alias" target="_blank" class="text-xs text-slate-600 hover:underline dark:text-slate-400 font-mono" x-text="alias"></a>
                                             </div>
                                         </template>
@@ -339,7 +336,7 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Domain Utama Klien</label>
+                            <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Nama Domain</label>
                             <input type="text" name="domain" placeholder="megastore.com" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white" required>
                             <span class="text-[10px] text-slate-400 mt-1 block">Tanpa http:// atau www.</span>
                         </div>
@@ -351,6 +348,12 @@
                                 @endforeach
                             </select>
                         </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Daftar Subdomain (Opsional)</label>
+                        <input type="text" name="subdomains" placeholder="contoh: www, api, admin" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Pisahkan dengan koma. Ini hanya untuk pendataan di panel dan belum otomatis dibuatkan DNS/VHost terpisah.</span>
                     </div>
 
                     <!-- Cloudflare DNS Automation Toggle -->
@@ -386,7 +389,7 @@
                         </div>
                         <div>
                             <h3 class="text-lg font-bold text-slate-900 dark:text-white" x-text="activeTenant ? 'Domain Alias: ' + activeTenant.name : 'Domain Manager'"></h3>
-                            <p class="text-xs text-slate-500" x-text="activeTenant ? 'Primary Domain: ' + activeTenant.domain : ''"></p>
+                            <p class="text-xs text-slate-500" x-text="activeTenant ? 'Domain: ' + activeTenant.domain : ''"></p>
                         </div>
                     </div>
                     <button @click="openModalDomain = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>

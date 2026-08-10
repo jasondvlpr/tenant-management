@@ -15,7 +15,7 @@
                 'name' => $t->name,
                 'remoteId' => $t->remote_tenant_id,
                 'dbName' => $t->database_name,
-                'domain' => $t->domain,
+                'domain' => $t->domains[0]['domain'] ?? 'N/A',
                 'server' => $t->clusterNode ? $t->clusterNode->name : 'Unassigned',
                 'serverIp' => $t->clusterNode ? $t->clusterNode->ip_address : 'N/A',
                 'status' => $t->status,
@@ -24,13 +24,13 @@
                 'users' => $t->users,
                 'avatar' => $t->avatar,
                 'color' => $t->color,
-                'cfStatus' => $t->cf_status,
-                'cfZoneId' => $t->cf_zone_id,
-                'cfZoneStatus' => $t->cf_zone_status ?? 'pending',
-                'cfNameServers' => $t->cf_nameservers ?? [],
+                'cfStatus' => $t->domains[0]['cf_status'] ?? 'pending',
+                'cfZoneId' => $t->domains[0]['cf_zone_id'] ?? null,
+                'cfZoneStatus' => $t->domains[0]['cf_zone_status'] ?? 'pending',
+                'cfNameServers' => $t->domains[0]['cf_nameservers'] ?? [],
                 'checkCfUrl' => route('tenants.check-cloudflare', $t->id),
                 'autoDns' => $t->auto_dns,
-                'aliases' => $t->aliases->pluck('alias')->toArray(),
+                'aliases' => collect($t->domains ?? [])->skip(1)->pluck('domain')->toArray(),
                 'deleteUrl' => route('tenants.destroy', $t->id)
             ];
         })->toJson() }},
@@ -219,18 +219,20 @@
                 <div class="mt-4">
                     <div class="mb-4 flex items-center justify-between">
                         <span class="text-xs font-bold uppercase text-slate-400">Daftar Domain Alias Aktif (Cloudflare Managed)</span>
-                        <a href="{{ url('/domains') }}" class="rounded-lg bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 transition">Buka Repository Global Domain ➔</a>
                     </div>
 
                     <ul class="space-y-2.5 max-h-48 overflow-y-auto pr-1 text-xs">
                         <template x-if="activeTenant && activeTenant.aliases && activeTenant.aliases.length > 0">
                             <template x-for="alias in activeTenant.aliases" :key="alias">
-                                <li class="flex items-center justify-between rounded-xl bg-slate-50 p-3.5 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800 font-mono">
-                                    <span class="font-bold text-slate-800 dark:text-slate-200" x-text="alias"></span>
-                                    <span class="text-orange-500 text-[11px] font-sans font-semibold flex items-center gap-1">
-                                        <span class="h-2 w-2 rounded-full bg-orange-500"></span> Proxied
-                                    </span>
-                                </li>
+                                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-slate-800 dark:text-slate-200" x-text="alias"></span>
+                                        <span class="text-[10px] uppercase font-bold text-slate-400">Alias</span>
+                                    </div>
+                                    <a :href="'http://' + alias" target="_blank" class="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20 transition">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                    </a>
+                                </div>
                             </template>
                         </template>
                         <template x-if="!activeTenant || !activeTenant.aliases || activeTenant.aliases.length === 0">

@@ -1,7 +1,6 @@
 @php
     $totalNodes = \App\Models\ClusterNode::count();
     $totalTenants = \App\Models\Tenant::count();
-    $totalDomains = \App\Models\DomainAlias::count();
     $totalJobs = \Illuminate\Support\Facades\Schema::hasTable('jobs') ? \Illuminate\Support\Facades\DB::table('jobs')->count() : 0;
 @endphp
 
@@ -83,15 +82,6 @@
                                 <span class="truncate">Daftar Tenant</span>
                             </div>
                             <span class="shrink-0 ml-2 rounded-md bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/20">{{ $totalTenants }}</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url('/domains') }}" class="group flex items-center justify-between rounded-xl px-3.5 py-2.5 font-medium text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-white {{ request()->is('domains*') ? 'bg-amber-500/15 text-amber-400 font-semibold border border-amber-500/20' : '' }}">
-                            <div class="flex items-center gap-3 truncate">
-                                <svg class="h-5 w-5 shrink-0 text-amber-400 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
-                                <span class="truncate">Domain Alias</span>
-                            </div>
-                            <span class="shrink-0 ml-2 rounded-md bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-bold text-amber-400 border border-amber-500/20">{{ $totalDomains }}</span>
                         </a>
                     </li>
                 </ul>

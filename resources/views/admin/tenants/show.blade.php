@@ -5,9 +5,9 @@
         activeTab: 'domains',
         isLoadingConfig: false,
         isCheckingCF: false,
-        cfZoneStatus: '{{ $tenant->cf_zone_status }}',
-        cfStatus: '{{ $tenant->cf_status }}',
-        cfNameservers: JSON.parse(atob('{!! base64_encode(json_encode(is_string($tenant->cf_nameservers) ? json_decode($tenant->cf_nameservers, true) : (empty($tenant->cf_nameservers) ? [] : $tenant->cf_nameservers))) !!}')),
+        cfZoneStatus: '{{ $domains[0]['cf_zone_status'] ?? 'pending' }}',
+        cfStatus: '{{ $domains[0]['cf_status'] ?? 'pending' }}',
+        cfNameservers: JSON.parse(atob('{!! base64_encode(json_encode(is_string($domains[0]['cf_nameservers'] ?? []) ? json_decode($domains[0]['cf_nameservers'] ?? '[]', true) : (empty($domains[0]['cf_nameservers']) ? [] : $domains[0]['cf_nameservers']))) !!}')),
         checkCF() {
             this.isCheckingCF = true;
             fetch('{{ route('tenants.check-cloudflare', $tenant->id) }}', {
@@ -195,43 +195,8 @@
                                 </span>
                             @endif
                         </div>
-                        <div>
-                            <span class="block text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Otomasi DNS Cloudflare</span>
-                            <div class="flex items-center gap-2">
-                                <span x-show="cfZoneStatus === 'active'" style="display: none;" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 shadow-sm">
-                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-                                    Active (WAF Protected)
-                                </span>
-                                <span x-show="cfZoneStatus !== 'active' && cfStatus.includes('Orange')" style="display: none;" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20 shadow-sm">
-                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.43,8.08c-0.27-2.61-2.48-4.66-5.18-4.66c-2.1,0-3.93,1.25-4.78,3.06C7.03,6.38,6.53,6.31,6,6.31 C4.34,6.31,3,7.66,3,9.31c0,0.27,0.04,0.53,0.11,0.78C2.42,10.74,2,11.83,2,13c0,2.21,1.79,4,4,4h13c1.66,0,3-1.34,3-3 C22,11.45,20.02,9.33,17.43,8.08z"/></svg>
-                                    Proxied (Orange Cloud)
-                                </span>
-                                <span x-show="cfZoneStatus !== 'active' && !cfStatus.includes('Orange')" style="display: none;" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 shadow-sm">
-                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                                    Pending Name Server
-                                </span>
-                            </div>
-                        </div>
-
                         <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 mt-2">
-                            <div x-show="cfNameservers && cfNameservers.length > 0" style="display: none;">
-                                <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Name Servers yang harus digunakan:</span>
-                                <ul class="space-y-1.5">
-                                    <template x-for="ns in cfNameservers">
-                                        <li class="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-slate-300 group">
-                                            <div class="flex items-center gap-2">
-                                                <svg class="h-3 w-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                <span x-text="ns"></span>
-                                            </div>
-                                            <button @click="navigator.clipboard.writeText(ns); alert('Name Server disalin ke clipboard!');" type="button" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition opacity-0 group-hover:opacity-100 p-1" title="Salin">
-                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                            </button>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-                            
-                            <div class="mt-4">
+                            <div class="mt-2">
                                 <button @click="checkCF()" :disabled="isCheckingCF" type="button" class="w-full inline-flex justify-center items-center gap-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-50">
                                     <svg x-show="!isCheckingCF" class="h-3.5 w-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                                     <svg x-show="isCheckingCF" class="h-3.5 w-3.5 text-orange-500 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -271,73 +236,100 @@
                             </button>
                         </div>
                         <span x-show="activeTab === 'domains'" class="bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-500/10 dark:border-indigo-500/20 dark:text-indigo-400 text-xs font-bold px-2.5 py-1 rounded-full mb-1">
-                            {{ $domains->count() }} Domain
+                            {{ count($domains) }} Domain
                         </span>
                     </div>
                     
                     <div x-show="activeTab === 'domains'" class="p-0 overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
+                        <table class="w-full text-left border-collapse border border-slate-200 dark:border-slate-700">
                             <thead>
                                 <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-                                    <th class="py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nama Domain</th>
-                                    <th class="py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status CF</th>
-                                    <th class="py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipe Record</th>
-                                    <th class="py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Aksi</th>
+                                    <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nama Domain</th>
+                                    <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Subdomain</th>
+                                    <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status CF</th>
+                                    <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipe Record</th>
+                                    <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
                                 @foreach($domains as $dom)
-                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors {{ $dom->is_primary ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : '' }}">
-                                        <td class="py-4 px-6 align-middle">
+                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                        <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">
                                             <div class="flex items-center gap-2">
-                                                <a href="http://{{ $dom->domain }}" target="_blank" class="font-mono text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                                                    {{ $dom->domain }}
+                                                <a href="http://{{ $dom['domain'] }}" target="_blank" class="font-mono text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                                                    {{ $dom['domain'] }}
                                                 </a>
-                                                @if($dom->is_primary)
-                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30">Utama</span>
-                                                @endif
                                             </div>
                                         </td>
-                                        <td class="py-4 px-6 align-middle">
-                                            @if(str_contains(strtolower($dom->cf_status), 'proxied'))
+                                        <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">
+                                            <div class="flex flex-col gap-1">
+                                                @foreach(($dom['subdomains'] ?? []) as $sub)
+                                                    <div class="flex items-center gap-2 group">
+                                                        <a href="http://{{ $sub }}.{{ $dom['domain'] }}" target="_blank" class="text-[11px] font-mono text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition">
+                                                            {{ $sub }}
+                                                        </a>
+                                                        <form action="{{ route('domains.subdomains.destroy', ['tenant' => $tenant->id, 'domainId' => $dom['id'], 'subdomain' => $sub]) }}" method="POST" onsubmit="return confirm('Hapus subdomain {{ $sub }}.{{ $dom['domain'] }}?');" class="inline-block">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="opacity-0 group-hover:opacity-100 p-0.5 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition" title="Hapus Subdomain">
+                                                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                @endforeach
+                                                <form action="{{ route('domains.subdomains.store', ['tenant' => $tenant->id, 'domainId' => $dom['id']]) }}" method="POST" class="mt-2 flex items-center gap-1">
+                                                    @csrf
+                                                    <input type="text" name="subdomain" placeholder="subdomain" class="w-24 text-[11px] rounded bg-slate-100 px-2 py-1 text-slate-700 border-transparent focus:border-indigo-500 focus:bg-white focus:ring-0 dark:bg-slate-800 dark:text-slate-300" required>
+                                                    <button type="submit" class="shrink-0 p-1 rounded text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-500/20 dark:hover:text-indigo-400 transition" title="Tambah Subdomain">
+                                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                        <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">
+                                            @if(str_contains(strtolower($dom['cf_status']), 'proxied'))
                                                 <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
                                                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.43,8.08c-0.27-2.61-2.48-4.66-5.18-4.66c-2.1,0-3.93,1.25-4.78,3.06C7.03,6.38,6.53,6.31,6,6.31 C4.34,6.31,3,7.66,3,9.31c0,0.27,0.04,0.53,0.11,0.78C2.42,10.74,2,11.83,2,13c0,2.21,1.79,4,4,4h13c1.66,0,3-1.34,3-3 C22,11.45,20.02,9.33,17.43,8.08z"/></svg>
                                                     Proxied
                                                 </span>
-                                            @elseif(str_contains(strtolower($dom->cf_status), 'pending'))
+                                            @elseif(str_contains(strtolower($dom['cf_status']), 'pending'))
                                                 <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
                                                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                                                     Pending
                                                 </span>
                                             @else
                                                 <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                                                    {{ $dom->cf_status }}
+                                                    {{ $dom['cf_status'] }}
                                                 </span>
                                             @endif
+                                            @if(!empty($dom['cf_nameservers']))
+                                                <div class="mt-2 text-xs font-mono text-slate-400">
+                                                    <div>NS:</div>
+                                                    @foreach($dom['cf_nameservers'] as $ns)
+                                                    <div class="flex items-center justify-between">
+                                                        <span>{{ $ns }}</span>
+                                                        <button @click="navigator.clipboard.writeText('{{ $ns }}'); alert('Name Server disalin ke clipboard!');" class="text-indigo-500 hover:text-indigo-700 transition">
+                                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                                        </button>
+                                                    </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                         </td>
-                                        <td class="py-4 px-6 align-middle">
+                                        <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">
                                             <span class="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-400 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">
-                                                {{ $dom->type }}
+                                                {{ $dom['type'] ?? 'CNAME' }}
                                             </span>
                                         </td>
-                                        <td class="py-4 px-6 align-middle text-right">
+                                        <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle text-right">
                                             <div class="flex items-center justify-end gap-2">
-                                                @if(!$dom->is_primary)
-                                                    <form action="{{ route('tenants.set-primary', $tenant->id) }}" method="POST" onsubmit="return confirm('Jadikan {{ $dom->domain }} sebagai domain utama?');">
-                                                        @csrf
-                                                        <input type="hidden" name="domain" value="{{ $dom->domain }}">
-                                                        <button type="submit" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg dark:text-indigo-400 dark:hover:bg-indigo-500/10 transition" title="Jadikan Utama">
-                                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                                        </button>
-                                                    </form>
-                                                    <form action="{{ route('domains.destroy', $dom->id) }}" method="POST" onsubmit="return confirm('Hapus domain {{ $dom->domain }}?');">
+                                                    <form action="{{ route('domains.destroy', $dom['id']) }}" method="POST" onsubmit="return confirm('Hapus domain {{ $dom['domain'] }}?');">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit" class="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg dark:text-rose-400 dark:hover:bg-rose-500/10 transition" title="Hapus Domain">
                                                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                         </button>
                                                     </form>
-                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -463,6 +455,11 @@
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Nama Domain Alias</label>
                                     <input type="text" name="alias" placeholder="contoh.com" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Daftar Subdomain (Opsional)</label>
+                                    <input type="text" name="subdomains" placeholder="contoh: www, api, admin" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                                    <span class="text-[10px] text-slate-400 mt-1 block">Pisahkan dengan koma. Ini hanya untuk pendataan di panel dan belum otomatis dibuatkan DNS/VHost terpisah.</span>
                                 </div>
 
                                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">

@@ -13,7 +13,7 @@ class TenantController extends Controller
 {
     public function index()
     {
-        $tenants = Tenant::with('clusterNode', 'aliases')->latest()->get();
+        $tenants = Tenant::with('clusterNode')->latest()->get();
         $nodes = ClusterNode::all();
 
         return view('admin.tenants.index', compact('tenants', 'nodes'));
@@ -21,7 +21,7 @@ class TenantController extends Controller
 
     public function list()
     {
-        $tenants = Tenant::with('clusterNode', 'aliases')->latest()->get();
+        $tenants = Tenant::with('clusterNode')->latest()->get();
         $nodes = ClusterNode::all();
 
     return view('admin.tenants.list', compact('tenants', 'nodes'));
@@ -29,68 +29,14 @@ class TenantController extends Controller
 
     public function show(Tenant $tenant)
     {
-        $tenant->load('clusterNode', 'aliases');
+        $tenant->load('clusterNode');
         
-        // Gabungkan domain utama dan aliases ke dalam satu list untuk mempermudah view
-        $domains = collect([
-            (object)[
-                'id' => 'primary',
-                'domain' => $tenant->domain,
-                'is_primary' => true,
-                'type' => filter_var($tenant->clusterNode?->ip_address, FILTER_VALIDATE_IP) ? 'A' : 'CNAME',
-                'cf_status' => $tenant->cf_status,
-                'ssl' => 'Active (TLS 1.3)'
-            ]
-        ]);
-
-        foreach ($tenant->aliases as $alias) {
-            $domains->push((object)[
-                'id' => $alias->id,
-                'domain' => $alias->alias,
-                'is_primary' => false,
-                'type' => $alias->type,
-                'cf_status' => $alias->cf_status,
-                'ssl' => $alias->ssl
-            ]);
-        }
+        $domains = collect($tenant->domains ?? []);
 
         return view('admin.tenants.show', compact('tenant', 'domains'));
     }
 
-    public function setPrimaryDomain(Request $request, Tenant $tenant)
-    {
-        $request->validate([
-            'domain' => 'required|string|exists:domain_aliases,alias'
-        ]);
 
-        $newPrimaryDomain = $request->input('domain');
-        $aliasRecord = DomainAlias::where('tenant_id', $tenant->id)->where('alias', $newPrimaryDomain)->firstOrFail();
-
-        // Simpan domain utama yang lama menjadi alias
-        $oldPrimaryDomain = $tenant->domain;
-        $oldPrimaryType = filter_var($tenant->clusterNode?->ip_address, FILTER_VALIDATE_IP) ? 'A' : 'CNAME';
-        $oldPrimaryCfStatus = $tenant->cf_status;
-
-        // Update tenant dengan domain utama yang baru
-        $tenant->update([
-            'domain' => $newPrimaryDomain,
-            'cf_status' => $aliasRecord->cf_status
-        ]);
-
-        // Hapus alias yang sudah menjadi domain utama
-        $aliasRecord->delete();
-
-        // Buat alias baru untuk domain utama yang lama
-        DomainAlias::create([
-            'tenant_id' => $tenant->id,
-            'alias' => $oldPrimaryDomain,
-            'type' => $oldPrimaryType,
-            'cf_status' => $oldPrimaryCfStatus,
-            'ssl' => 'Active (TLS 1.3)'
-        ]);
-
-        return back()->with('success', "Berhasil mengubah $newPrimaryDomain menjadi domain utama.");
-    }
 
     public function store(Request $request)
     {
@@ -98,8 +44,14 @@ class TenantController extends Controller
             'cluster_node_id' => 'required|exists:cluster_nodes,id',
             'name' => 'required|string|max:255',
             'remote_tenant_id' => 'required|string|regex:/^[a-zA-Z0-9\-\_]+$/|max:50|unique:tenants,remote_tenant_id',
-            'domain' => 'required|string|max:255|unique:tenants,domain',
-            'auto_dns' => 'nullable|boolean',
+            'domain' => ['required', 'string', 'max:255', function ($attribute, $value, $fail) {
+                // Check if domain exists in any tenant's domains json
+                $exists = \App\Models\Tenant::whereJsonContains('domains', ['domain' => $value])->exists();
+                if ($exists) {
+                    $fail('Domain ini sudah terdaftar di sistem.');
+                }
+            }],
+            'subdomains' => 'nullable|string',
         ], [
             'remote_tenant_id.regex' => 'ID Tenant tidak boleh mengandung spasi atau karakter khusus.',
             'remote_tenant_id.unique' => 'ID Tenant ini sudah terdaftar di pangkalan data.',
@@ -108,15 +60,29 @@ class TenantController extends Controller
         $colors = ['indigo', 'emerald', 'purple', 'amber', 'blue', 'rose'];
         $cleanId = strtoupper($validated['remote_tenant_id']);
 
+        $subdomainsStr = $request->input('subdomains', '');
+        $subdomains = array_values(array_filter(array_map('trim', explode(',', $subdomainsStr))));
+
+        $domains = [
+            [
+                'id' => uniqid(),
+                'domain' => $validated['domain'],
+                'subdomains' => $subdomains,
+                'type' => 'A',
+                'cf_status' => 'Syncing Zone...',
+                'cf_zone_id' => null,
+                'cf_zone_status' => 'pending',
+                'cf_nameservers' => [],
+            ]
+        ];
+
         $tenant = Tenant::create([
             'cluster_node_id' => $validated['cluster_node_id'],
             'remote_tenant_id' => $cleanId,
             'database_name' => 'giga_' . $cleanId,
             'name' => $validated['name'],
-            'domain' => $validated['domain'],
-            'auto_dns' => $request->has('auto_dns') || $request->input('auto_dns') == 1,
+            'domains' => $domains,
             'status' => 'Deploying',
-            'cf_status' => 'Syncing Zone...',
             'avatar' => strtoupper(substr($cleanId, 0, 1)),
             'color' => $colors[array_rand($colors)],
         ]);
