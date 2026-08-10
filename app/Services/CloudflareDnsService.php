@@ -269,8 +269,23 @@ class CloudflareDnsService
                 ->post($endpoint, $payload);
 
             $latency = round((microtime(true) - $startTime) * 1000) . 'ms';
+            $isSuccess = $response->successful();
             $statusCode = $response->status();
-            $statusText = $statusCode . ' ' . ($response->successful() ? 'OK (DNS Record Created)' : 'API Error');
+            $statusText = $statusCode . ' ' . ($isSuccess ? 'OK (DNS Record Created)' : 'API Error');
+
+            if (!$isSuccess) {
+                $errJson = $response->json();
+                if (!empty($errJson['errors']) && is_array($errJson['errors'])) {
+                    foreach ($errJson['errors'] as $error) {
+                        if (($error['code'] ?? null) == 81058) {
+                            $isSuccess = true;
+                            $statusText = $statusCode . ' OK (Identical Record Exists)';
+                            break;
+                        }
+                    }
+                }
+            }
+
             $responseBody = json_decode($response->body(), true) ? json_encode($response->json(), JSON_PRETTY_PRINT) : $response->body();
 
             ApiLog::create([
@@ -286,7 +301,7 @@ class CloudflareDnsService
             ]);
 
             return [
-                'success' => $response->successful(),
+                'success' => $isSuccess,
                 'zone_id' => $zoneId,
                 'zone_status' => $zoneInfo['status'] ?? 'pending',
                 'name_servers' => $zoneInfo['name_servers'] ?? [],

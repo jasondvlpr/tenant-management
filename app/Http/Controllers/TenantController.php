@@ -24,7 +24,72 @@ class TenantController extends Controller
         $tenants = Tenant::with('clusterNode', 'aliases')->latest()->get();
         $nodes = ClusterNode::all();
 
-        return view('admin.tenants.list', compact('tenants', 'nodes'));
+    return view('admin.tenants.list', compact('tenants', 'nodes'));
+    }
+
+    public function show(Tenant $tenant)
+    {
+        $tenant->load('clusterNode', 'aliases');
+        
+        // Gabungkan domain utama dan aliases ke dalam satu list untuk mempermudah view
+        $domains = collect([
+            (object)[
+                'id' => 'primary',
+                'domain' => $tenant->domain,
+                'is_primary' => true,
+                'type' => filter_var($tenant->clusterNode?->ip_address, FILTER_VALIDATE_IP) ? 'A' : 'CNAME',
+                'cf_status' => $tenant->cf_status,
+                'ssl' => 'Active (TLS 1.3)'
+            ]
+        ]);
+
+        foreach ($tenant->aliases as $alias) {
+            $domains->push((object)[
+                'id' => $alias->id,
+                'domain' => $alias->alias,
+                'is_primary' => false,
+                'type' => $alias->type,
+                'cf_status' => $alias->cf_status,
+                'ssl' => $alias->ssl
+            ]);
+        }
+
+        return view('admin.tenants.show', compact('tenant', 'domains'));
+    }
+
+    public function setPrimaryDomain(Request $request, Tenant $tenant)
+    {
+        $request->validate([
+            'domain' => 'required|string|exists:domain_aliases,alias'
+        ]);
+
+        $newPrimaryDomain = $request->input('domain');
+        $aliasRecord = DomainAlias::where('tenant_id', $tenant->id)->where('alias', $newPrimaryDomain)->firstOrFail();
+
+        // Simpan domain utama yang lama menjadi alias
+        $oldPrimaryDomain = $tenant->domain;
+        $oldPrimaryType = filter_var($tenant->clusterNode?->ip_address, FILTER_VALIDATE_IP) ? 'A' : 'CNAME';
+        $oldPrimaryCfStatus = $tenant->cf_status;
+
+        // Update tenant dengan domain utama yang baru
+        $tenant->update([
+            'domain' => $newPrimaryDomain,
+            'cf_status' => $aliasRecord->cf_status
+        ]);
+
+        // Hapus alias yang sudah menjadi domain utama
+        $aliasRecord->delete();
+
+        // Buat alias baru untuk domain utama yang lama
+        DomainAlias::create([
+            'tenant_id' => $tenant->id,
+            'alias' => $oldPrimaryDomain,
+            'type' => $oldPrimaryType,
+            'cf_status' => $oldPrimaryCfStatus,
+            'ssl' => 'Active (TLS 1.3)'
+        ]);
+
+        return back()->with('success', "Berhasil mengubah $newPrimaryDomain menjadi domain utama.");
     }
 
     public function store(Request $request)
