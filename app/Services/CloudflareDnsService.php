@@ -47,6 +47,24 @@ class CloudflareDnsService
 
         // Step 1: Check if domain or its parent zone already exists in user's Cloudflare account
         try {
+            // Coba cari domain exact match dulu untuk menghindari masalah limit 50 per_page
+            $response = Http::withHeaders($headers)
+                ->timeout(15)
+                ->get('https://api.cloudflare.com/client/v4/zones', [
+                    'name' => strtolower($domainName)
+                ]);
+
+            if ($response->successful() && !empty($response->json('result'))) {
+                $zone = $response->json('result.0');
+                return [
+                    'id' => $zone['id'],
+                    'status' => $zone['status'] ?? 'pending',
+                    'name_servers' => $zone['name_servers'] ?? [],
+                    'name' => $zone['name']
+                ];
+            }
+
+            // Jika tidak ketemu exact, coba fallback ambil semua (limit 50) untuk cari subdomain
             $response = Http::withHeaders($headers)
                 ->timeout(15)
                 ->get('https://api.cloudflare.com/client/v4/zones', [

@@ -77,27 +77,29 @@ class RemoteProvisioningService
                         $isSuspended = $mainDomainObj['is_suspended'] ?? false;
 
                         // Create or update primary Tenant record
-                        $tenant = Tenant::updateOrCreate(
-                            ['domain' => $mainDomain],
-                            [
-                                'cluster_node_id' => $node->id,
-                                'remote_tenant_id' => $remoteId,
-                                'database_name' => $dbName,
-                                'name' => 'Client ' . $remoteId,
-                                'status' => $isSuspended ? 'Suspended' : 'Active',
-                                'cf_status' => 'Pending Check',
-                                'auto_dns' => true,
-                                'avatar' => strtoupper(substr(str_replace('CLIENT-', '', $remoteId), 0, 1)),
-                                'color' => 'indigo',
-                                'cpu' => mt_rand(10, 35) . '%',
-                                'storage' => mt_rand(5, 45) . ' GB / 100 GB',
-                                'users' => mt_rand(5, 50),
-                                'users_count' => $usersCount,
-                                'transactions_count' => $transactionsCount,
-                                'first_deposit_amount' => $firstDepositAmount,
-                                'redeposit_amount' => $redepositAmount,
-                            ]
-                        );
+                        $tenant = Tenant::firstOrNew(['domain' => $mainDomain]);
+                        if (!$tenant->exists) {
+                            $tenant->cf_status = 'Pending Check';
+                        }
+                        
+                        $tenant->fill([
+                            'cluster_node_id' => $node->id,
+                            'remote_tenant_id' => $remoteId,
+                            'database_name' => $dbName,
+                            'name' => 'Client ' . $remoteId,
+                            'status' => $isSuspended ? 'Suspended' : 'Active',
+                            'auto_dns' => true,
+                            'avatar' => strtoupper(substr(str_replace('CLIENT-', '', $remoteId), 0, 1)),
+                            'color' => 'indigo',
+                            'cpu' => mt_rand(10, 35) . '%',
+                            'storage' => mt_rand(5, 45) . ' GB / 100 GB',
+                            'users' => mt_rand(5, 50),
+                            'users_count' => $usersCount,
+                            'transactions_count' => $transactionsCount,
+                            'first_deposit_amount' => $firstDepositAmount,
+                            'redeposit_amount' => $redepositAmount,
+                        ]);
+                        $tenant->save();
 
                         // If tenant has additional domains, map them to DomainAlias table
                         if (count($domains) > 1) {
