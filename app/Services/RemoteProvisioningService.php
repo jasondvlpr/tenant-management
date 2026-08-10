@@ -85,7 +85,7 @@ class RemoteProvisioningService
                                 'database_name' => $dbName,
                                 'name' => 'Client ' . $remoteId,
                                 'status' => $isSuspended ? 'Suspended' : 'Active',
-                                'cf_status' => 'Proxied (Orange Cloud)',
+                                'cf_status' => 'Pending Check',
                                 'auto_dns' => true,
                                 'avatar' => strtoupper(substr(str_replace('CLIENT-', '', $remoteId), 0, 1)),
                                 'color' => 'indigo',
@@ -113,6 +113,9 @@ class RemoteProvisioningService
                                 );
                             }
                         }
+
+                        // Dispatch job to check CF status
+                        \App\Jobs\CheckCloudflareDomainStatus::dispatch($tenant);
 
                         $count++;
                     }
