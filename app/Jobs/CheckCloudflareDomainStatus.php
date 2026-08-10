@@ -44,7 +44,10 @@ class CheckCloudflareDomainStatus implements ShouldQueue
             };
 
             $this->tenant->update([
-                'cf_status' => $displayStatus
+                'cf_status' => $displayStatus,
+                'cf_zone_id' => $result['id'] ?? null,
+                'cf_zone_status' => strtolower($status),
+                'cf_nameservers' => isset($result['name_servers']) ? json_encode($result['name_servers']) : null
             ]);
         } else {
             Log::warning("Gagal cek status CF untuk tenant {$this->tenant->domain}: " . ($result['error'] ?? 'Unknown Error'));
