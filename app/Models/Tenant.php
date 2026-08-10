@@ -12,7 +12,6 @@ class Tenant extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'auto_dns' => 'boolean',
         'domains' => 'array',
     ];
 

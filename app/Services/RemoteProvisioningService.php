@@ -86,7 +86,6 @@ class RemoteProvisioningService
                             'database_name' => $dbName,
                             'name' => 'Client ' . $remoteId,
                             'status' => $isSuspended ? 'Suspended' : 'Active',
-                            'auto_dns' => true,
                             'avatar' => strtoupper(substr(str_replace('CLIENT-', '', $remoteId), 0, 1)),
                             'color' => 'indigo',
                             'cpu' => mt_rand(10, 35) . '%',

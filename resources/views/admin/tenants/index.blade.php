@@ -29,7 +29,6 @@
                 'cfZoneStatus' => $t->domains[0]['cf_zone_status'] ?? 'pending',
                 'cfNameServers' => $t->domains[0]['cf_nameservers'] ?? [],
                 'checkCfUrl' => route('tenants.check-cloudflare', $t->id),
-                'autoDns' => $t->auto_dns,
                 'aliases' => collect($t->domains ?? [])->skip(1)->pluck('domain')->toArray(),
                 'deleteUrl' => route('tenants.destroy', $t->id)
             ];

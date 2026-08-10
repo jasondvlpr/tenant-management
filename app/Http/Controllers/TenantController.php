@@ -126,10 +126,11 @@ class TenantController extends Controller
     {
         $remoteId = $tenant->remote_tenant_id ?: $tenant->id;
         $name = $tenant->name;
-        $domain = $tenant->domain;
+        $domains = $tenant->domains ?? [];
+        $domain = $domains[0]['domain'] ?? null;
 
         $service->removeTenant($tenant);
-        if ($tenant->auto_dns && $domain) {
+        if ($domain) {
             $cfService->deleteRecord($domain, $name);
         }
         $tenant->delete();
