@@ -81,6 +81,19 @@
                     </div>
                 </div>
 
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">Verifikasi Keamanan</label>
+                    <div class="flex flex-col sm:flex-row items-center gap-3">
+                        <div class="w-full sm:w-1/2 shrink-0 flex justify-center bg-slate-800/80 rounded-2xl border border-slate-700/80 p-2 overflow-hidden shadow-inner">
+                            <img src="{{ captcha_src('flat') }}" alt="Captcha" class="w-full h-auto rounded-lg cursor-pointer hover:opacity-80 transition mix-blend-screen" onclick="this.src='{{ captcha_src('flat') }}&_='+Math.random()" title="Klik untuk mengubah kode Captcha">
+                        </div>
+                        <div class="w-full sm:w-1/2">
+                            <input type="text" name="captcha" required placeholder="Ketik Captcha" class="w-full rounded-2xl border border-slate-700/80 bg-slate-950/70 py-3.5 px-4 text-center text-sm font-bold text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition">
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-500 text-center mt-1">Klik gambar jika kode sulit terbaca.</p>
+                </div>
+
                 <div class="flex items-center justify-between text-xs pt-1">
                     <label class="flex items-center gap-2 cursor-pointer text-slate-400 hover:text-slate-300">
                         <input type="checkbox" name="remember" class="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500/30 h-4 w-4" checked>

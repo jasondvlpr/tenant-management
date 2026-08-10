@@ -15,6 +15,7 @@ class AuthController extends Controller
         if (Auth::check()) {
             return redirect()->route('tenants.index');
         }
+        
         return view('auth.login');
     }
 
@@ -26,6 +27,9 @@ class AuthController extends Controller
         $request->validate([
             'login' => 'required|string',
             'password' => 'required|string',
+            'captcha' => 'required|captcha',
+        ], [
+            'captcha.captcha' => 'Kode Captcha yang Anda masukkan tidak sesuai. Silakan coba lagi.'
         ]);
 
         $loginInput = $request->input('login');
