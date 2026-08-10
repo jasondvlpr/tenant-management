@@ -428,4 +428,53 @@ class CloudflareDnsService
             return false;
         }
     }
+
+    /**
+     * Create a WWW to Root Domain Redirect in Cloudflare (CNAME + Page Rule).
+     */
+    public function createWwwRedirect(string $zoneId, string $domainName, string $tenantReference = 'System DNS'): array
+    {
+        $headers = $this->getHeaders();
+
+        // 1. Ensure CNAME for www exists and is proxied
+        $this->syncRecord("www.{$domainName}", 'CNAME', $domainName, true, $tenantReference, $zoneId);
+
+        // 2. Create Page Rule for 301 Forwarding
+        $endpoint = "https://api.cloudflare.com/client/v4/zones/{$zoneId}/pagerules";
+        $payload = [
+            'targets' => [
+                [
+                    'target' => 'url',
+                    'constraint' => [
+                        'operator' => 'matches',
+                        'value' => "www.{$domainName}/*"
+                    ]
+                ]
+            ],
+            'actions' => [
+                [
+                    'id' => 'forwarding_url',
+                    'value' => [
+                        'url' => "https://{$domainName}/$1",
+                        'status_code' => 301
+                    ]
+                ]
+            ],
+            'priority' => 1,
+            'status' => 'active'
+        ];
+
+        try {
+            $response = Http::withHeaders($headers)->timeout(20)->post($endpoint, $payload);
+            
+            // Check if it already exists or successful
+            if ($response->successful() || str_contains($response->body(), 'already exists')) {
+                return ['success' => true, 'message' => "Redirect www ke utama berhasil dipasang di Cloudflare."];
+            }
+
+            return ['success' => false, 'error' => 'Gagal membuat Page Rule: ' . $response->body()];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }

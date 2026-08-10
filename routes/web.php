@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
     // Domain Alias & Virtual Hosts
     Route::post('/domains', [DomainAliasController::class, 'store'])->name('domains.store');
     Route::post('/tenants/{tenant}/domains/{domainId}/subdomains', [DomainAliasController::class, 'addSubdomain'])->name('domains.subdomains.store');
+    Route::post('/tenants/{tenant}/domains/{domainId}/www-redirect', [DomainAliasController::class, 'createWwwRedirect'])->name('domains.www-redirect');
     Route::delete('/tenants/{tenant}/domains/{domainId}/subdomains/{subdomain}', [DomainAliasController::class, 'destroySubdomain'])->name('domains.subdomains.destroy');
     Route::delete('/domains/{domain}', [DomainAliasController::class, 'destroy'])->name('domains.destroy');
 

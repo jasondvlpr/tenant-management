@@ -191,4 +191,42 @@ class DomainAliasController extends Controller
 
         return redirect()->back()->with('success', "Subdomain $subdomain berhasil dihapus dari server dan DNS.");
     }
+
+    public function createWwwRedirect(Request $request, Tenant $tenant, $domainId, \App\Services\CloudflareDnsService $cfService)
+    {
+        $domains = $tenant->domains ?? [];
+        $domainIndex = -1;
+        foreach ($domains as $index => $dom) {
+            if ($dom['id'] == $domainId) {
+                $domainIndex = $index;
+                break;
+            }
+        }
+
+        if ($domainIndex === -1) {
+            if ($request->wantsJson()) return response()->json(['success' => false, 'error' => 'Domain tidak ditemukan'], 404);
+            return redirect()->back()->with('error', 'Domain tidak ditemukan.');
+        }
+
+        $domainData = $domains[$domainIndex];
+        $zoneId = $domainData['cf_zone_id'] ?? null;
+        $domainName = $domainData['domain'];
+
+        if (empty($zoneId)) {
+            if ($request->wantsJson()) return response()->json(['success' => false, 'error' => 'Zone ID belum ada. Pastikan domain sudah sinkron dengan Cloudflare.'], 400);
+            return redirect()->back()->with('error', 'Zone ID belum ada. Pastikan domain sudah sinkron dengan Cloudflare.');
+        }
+
+        $result = $cfService->createWwwRedirect($zoneId, $domainName, $tenant->name);
+
+        if ($request->wantsJson()) {
+            return response()->json($result, $result['success'] ? 200 : 400);
+        }
+
+        if ($result['success']) {
+            return redirect()->back()->with('success', $result['message']);
+        }
+
+        return redirect()->back()->with('error', $result['error']);
+    }
 }

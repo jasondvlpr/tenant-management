@@ -328,6 +328,12 @@
                                         </td>
                                         <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle text-right">
                                             <div class="flex items-center justify-end gap-2">
+                                                    <form action="{{ route('domains.www-redirect', ['tenant' => $tenant->id, 'domainId' => $dom['id']]) }}" method="POST" onsubmit="return confirm('Aktifkan redirect www ke domain utama untuk {{ $dom['domain'] }}?');">
+                                                        @csrf
+                                                        <button type="submit" class="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg dark:text-indigo-400 dark:hover:bg-indigo-500/10 transition" title="Set Redirect WWW">
+                                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                                        </button>
+                                                    </form>
                                                     <form action="{{ route('domains.destroy', $dom['id']) }}" method="POST" onsubmit="return confirm('Hapus domain {{ $dom['domain'] }}?');">
                                                         @csrf
                                                         @method('DELETE')
