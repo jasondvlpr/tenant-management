@@ -54,24 +54,6 @@ class ProvisionTenantJob implements ShouldQueue
                     'cf_nameservers' => $cfResult['name_servers'] ?? [],
                 ]);
 
-                // Create AMP subdomain in Cloudflare
-                $ampDomain = 'amp.' . preg_replace('#^https?://(www\.)?#', '', $this->tenant->domain);
-                $cfAmpResult = $cfService->syncRecord(
-                    $ampDomain,
-                    $type,
-                    $target,
-                    true,
-                    $this->tenant->name . ' (AMP DNS)',
-                    $cfResult['zone_id'] ?? null
-                );
-
-                // Add to DomainAlias table
-                $this->tenant->aliases()->create([
-                    'alias' => $ampDomain,
-                    'type' => $type,
-                    'cf_status' => (!empty($cfAmpResult['success']) && $cfAmpResult['success']) ? 'Proxied (Orange Cloud)' : 'Pending Check',
-                    'ssl' => 'Active (TLS 1.3)'
-                ]);
             } else {
                 $this->tenant->update(['cf_status' => 'Sync Error (Check API Logs)', 'cf_zone_status' => 'error']);
             }
