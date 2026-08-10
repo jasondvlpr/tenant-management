@@ -33,7 +33,10 @@ class CheckCloudflareDomainStatus implements ShouldQueue
         }
         
         $mainDomainIndex = 0;
-        $domainName = $domains[$mainDomainIndex]['domain'];
+        $domainName = $domains[$mainDomainIndex]['domain'] ?? null;
+        if (empty($domainName)) {
+            return;
+        }
         
         // 1. Periksa status zone domain di Cloudflare
         $result = $cfService->checkZoneStatus(null, $domainName);

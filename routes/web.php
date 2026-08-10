@@ -8,6 +8,7 @@ use App\Http\Controllers\LogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QueueController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\NewsController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication & Session Gateway
@@ -50,6 +51,12 @@ Route::middleware('auth')->group(function () {
     // Queue Daemon & Workers
     Route::get('/queues', [QueueController::class, 'index'])->name('queues.index');
     Route::post('/queues/restart', [QueueController::class, 'restart'])->name('queues.restart');
+
+    // News Management
+    Route::get('/news', [NewsController::class, 'index'])->name('news.index');
+    Route::post('/news', [NewsController::class, 'store'])->name('news.store');
+    Route::put('/news/{news}', [NewsController::class, 'update'])->name('news.update');
+    Route::delete('/news/{news}', [NewsController::class, 'destroy'])->name('news.destroy');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');

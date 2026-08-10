@@ -73,7 +73,7 @@
 
             <!-- Section 2: Tenant & Domains -->
             <div>
-                <h3 class="mb-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Manajemen Tenant</h3>
+                <h3 class="mb-2.5 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Manajemen Utama</h3>
                 <ul class="space-y-1">
                     <li>
                         <a href="{{ url('/tenants') }}" class="group flex items-center justify-between rounded-xl px-3.5 py-2.5 font-medium text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-white {{ request()->is('tenants*') ? 'bg-emerald-600/15 text-emerald-400 font-semibold border border-emerald-500/20' : '' }}">
@@ -82,6 +82,14 @@
                                 <span class="truncate">Daftar Tenant</span>
                             </div>
                             <span class="shrink-0 ml-2 rounded-md bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400 border border-emerald-500/20">{{ $totalTenants }}</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url('/news') }}" class="group flex items-center justify-between rounded-xl px-3.5 py-2.5 font-medium text-slate-400 transition-all duration-200 hover:bg-slate-800/80 hover:text-white {{ request()->is('news*') ? 'bg-blue-600/15 text-blue-400 font-semibold border border-blue-500/20' : '' }}">
+                            <div class="flex items-center gap-3 truncate">
+                                <svg class="h-5 w-5 shrink-0 text-blue-400 transition-transform group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+                                <span class="truncate">Manajemen Berita</span>
+                            </div>
                         </a>
                     </li>
                 </ul>
