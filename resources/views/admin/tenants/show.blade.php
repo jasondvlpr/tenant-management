@@ -7,7 +7,7 @@
         isCheckingCF: false,
         cfZoneStatus: '{{ $tenant->cf_zone_status }}',
         cfStatus: '{{ $tenant->cf_status }}',
-        cfNameservers: {!! json_encode(is_string($tenant->cf_nameservers) ? json_decode($tenant->cf_nameservers, true) : (empty($tenant->cf_nameservers) ? [] : $tenant->cf_nameservers)) !!},
+        cfNameservers: JSON.parse(atob('{!! base64_encode(json_encode(is_string($tenant->cf_nameservers) ? json_decode($tenant->cf_nameservers, true) : (empty($tenant->cf_nameservers) ? [] : $tenant->cf_nameservers))) !!}')),
         checkCF() {
             this.isCheckingCF = true;
             fetch('{{ route('tenants.check-cloudflare', $tenant->id) }}', {
@@ -218,11 +218,14 @@
                                 <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Name Servers yang harus digunakan:</span>
                                 <ul class="space-y-1.5">
                                     <template x-for="ns in cfNameservers">
-                                        <li class="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-slate-300">
+                                        <li class="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-slate-300 group">
                                             <div class="flex items-center gap-2">
                                                 <svg class="h-3 w-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                 <span x-text="ns"></span>
                                             </div>
+                                            <button @click="navigator.clipboard.writeText(ns); alert('Name Server disalin ke clipboard!');" type="button" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition opacity-0 group-hover:opacity-100 p-1" title="Salin">
+                                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                            </button>
                                         </li>
                                     </template>
                                 </ul>
