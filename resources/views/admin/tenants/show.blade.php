@@ -4,6 +4,40 @@
         isDeploying: false,
         activeTab: 'domains',
         isLoadingConfig: false,
+        isCheckingCF: false,
+        cfZoneStatus: '{{ $tenant->cf_zone_status }}',
+        cfStatus: '{{ $tenant->cf_status }}',
+        cfNameservers: {!! json_encode(is_string($tenant->cf_nameservers) ? json_decode($tenant->cf_nameservers, true) : (empty($tenant->cf_nameservers) ? [] : $tenant->cf_nameservers)) !!},
+        checkCF() {
+            this.isCheckingCF = true;
+            fetch('{{ route('tenants.check-cloudflare', $tenant->id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.isCheckingCF = false;
+                if(data.success) {
+                    this.cfZoneStatus = data.cf_zone_status || 'pending';
+                    this.cfStatus = data.cf_status || 'Pending Check';
+                    if(data.cf_nameservers && data.cf_nameservers.length > 0) {
+                        this.cfNameservers = data.cf_nameservers;
+                    }
+                    alert(data.message);
+                } else {
+                    alert('Gagal: ' + (data.error || 'Terjadi kesalahan'));
+                }
+            })
+            .catch(err => {
+                this.isCheckingCF = false;
+                alert('Terjadi kesalahan jaringan.');
+                console.error(err);
+            });
+        },
         configLoaded: false,
         activeConfig: { settings: {}, api_configs: { game_api: {}, payment_api: {} } },
         isSavingConfig: false,
@@ -164,58 +198,44 @@
                         <div>
                             <span class="block text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Otomasi DNS Cloudflare</span>
                             <div class="flex items-center gap-2">
-                                @if($tenant->cf_zone_status === 'active')
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 shadow-sm">
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-                                        Active (WAF Protected)
-                                    </span>
-                                @elseif(str_contains($tenant->cf_status, 'Orange'))
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20 shadow-sm">
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.43,8.08c-0.27-2.61-2.48-4.66-5.18-4.66c-2.1,0-3.93,1.25-4.78,3.06C7.03,6.38,6.53,6.31,6,6.31 C4.34,6.31,3,7.66,3,9.31c0,0.27,0.04,0.53,0.11,0.78C2.42,10.74,2,11.83,2,13c0,2.21,1.79,4,4,4h13c1.66,0,3-1.34,3-3 C22,11.45,20.02,9.33,17.43,8.08z"/></svg>
-                                        Proxied (Orange Cloud)
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 shadow-sm">
-                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                                        Pending Name Server
-                                    </span>
-                                @endif
+                                <span x-show="cfZoneStatus === 'active'" style="display: none;" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20 shadow-sm">
+                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                                    Active (WAF Protected)
+                                </span>
+                                <span x-show="cfZoneStatus !== 'active' && cfStatus.includes('Orange')" style="display: none;" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20 shadow-sm">
+                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.43,8.08c-0.27-2.61-2.48-4.66-5.18-4.66c-2.1,0-3.93,1.25-4.78,3.06C7.03,6.38,6.53,6.31,6,6.31 C4.34,6.31,3,7.66,3,9.31c0,0.27,0.04,0.53,0.11,0.78C2.42,10.74,2,11.83,2,13c0,2.21,1.79,4,4,4h13c1.66,0,3-1.34,3-3 C22,11.45,20.02,9.33,17.43,8.08z"/></svg>
+                                    Proxied (Orange Cloud)
+                                </span>
+                                <span x-show="cfZoneStatus !== 'active' && !cfStatus.includes('Orange')" style="display: none;" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 shadow-sm">
+                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                    Pending Name Server
+                                </span>
                             </div>
                         </div>
 
-                        @if(!empty($tenant->cf_nameservers))
                         <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 mt-2">
-                            <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Name Servers yang harus digunakan:</span>
-                            <ul class="space-y-1.5">
-                                @foreach(is_string($tenant->cf_nameservers) ? json_decode($tenant->cf_nameservers, true) : $tenant->cf_nameservers as $ns)
-                                    <li class="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-slate-300">
-                                        <div class="flex items-center gap-2">
-                                            <svg class="h-3 w-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            <span>{{ $ns }}</span>
-                                        </div>
-                                    </li>
-                                @endforeach
-                            </ul>
+                            <div x-show="cfNameservers && cfNameservers.length > 0" style="display: none;">
+                                <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Name Servers yang harus digunakan:</span>
+                                <ul class="space-y-1.5">
+                                    <template x-for="ns in cfNameservers">
+                                        <li class="flex items-center justify-between text-xs font-mono text-slate-700 dark:text-slate-300">
+                                            <div class="flex items-center gap-2">
+                                                <svg class="h-3 w-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                <span x-text="ns"></span>
+                                            </div>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
                             
-                            <form action="{{ route('tenants.check-cloudflare', $tenant->id) }}" method="POST" class="mt-4">
-                                @csrf
-                                <button type="submit" class="w-full inline-flex justify-center items-center gap-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-                                    <svg class="h-3.5 w-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    Cek Status DNS ke Cloudflare
+                            <div class="mt-4">
+                                <button @click="checkCF()" :disabled="isCheckingCF" type="button" class="w-full inline-flex justify-center items-center gap-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-50">
+                                    <svg x-show="!isCheckingCF" class="h-3.5 w-3.5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                    <svg x-show="isCheckingCF" class="h-3.5 w-3.5 text-orange-500 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                    <span x-text="isCheckingCF ? 'Memeriksa DNS...' : 'Cek Status DNS ke Cloudflare'"></span>
                                 </button>
-                            </form>
+                            </div>
                         </div>
-                        @else
-                        <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 mt-2">
-                            <form action="{{ route('tenants.check-cloudflare', $tenant->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="w-full inline-flex justify-center items-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95 transition">
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    Daftarkan DNS ke Cloudflare
-                                </button>
-                            </form>
-                        </div>
-                        @endif
                         <div>
                             <span class="block text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Master Node</span>
                             <div class="flex items-center gap-2">

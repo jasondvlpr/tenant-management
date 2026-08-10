@@ -173,7 +173,7 @@ class TenantController extends Controller
         return redirect()->back()->with('success', "Tenant {$name} ({$remoteId}) serta entri domain dan zona DNS di Cloudflare telah dibesut dan dicopot secara permanen!");
     }
 
-    public function checkCloudflareStatus(Tenant $tenant, \App\Services\CloudflareDnsService $cfService)
+    public function checkCloudflareStatus(\Illuminate\Http\Request $request, Tenant $tenant, \App\Services\CloudflareDnsService $cfService)
     {
         $res = $cfService->checkZoneStatus($tenant->cf_zone_id, $tenant->domain);
 
@@ -184,11 +184,31 @@ class TenantController extends Controller
                 'cf_nameservers' => $res['name_servers'] ?? $tenant->cf_nameservers,
             ]);
 
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'status' => $res['status'],
+                    'message' => $res['status'] === 'active' 
+                        ? "Selamat! Domain {$tenant->domain} resmi TERHUBUNG (Active) di Cloudflare."
+                        : "Status domain {$tenant->domain} di Cloudflare saat ini masih: " . strtoupper($res['status']) . ".",
+                    'cf_zone_status' => $res['status'],
+                    'cf_status' => $tenant->cf_status,
+                    'cf_nameservers' => $res['name_servers'] ?? $tenant->cf_nameservers,
+                ]);
+            }
+
             if ($res['status'] === 'active') {
                 return redirect()->back()->with('success', "Selamat! Domain {$tenant->domain} resmi TERHUBUNG (Active) di Cloudflare. Perlindungan WAF & Reverse Proxy Orange Cloud bekerja sempurna!");
             } else {
                 return redirect()->back()->with('success', "Status domain {$tenant->domain} di Cloudflare saat ini masih: " . strtoupper($res['status']) . ". Pastikan Anda telah memasang Name Server Cloudflare pada panel registrar domain Anda.");
             }
+        }
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => false,
+                'error' => $res['error'] ?? "Gagal memeriksa status koneksi Cloudflare untuk domain {$tenant->domain}."
+            ], 400);
         }
 
         return redirect()->back()->with('error', $res['error'] ?? "Gagal memeriksa status koneksi Cloudflare untuk domain {$tenant->domain}.");
