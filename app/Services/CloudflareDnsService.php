@@ -236,10 +236,15 @@ class CloudflareDnsService
     /**
      * Register an A or CNAME Record in Cloudflare for a Tenant or Domain Alias.
      */
-    public function syncRecord(string $recordName, string $recordType, string $targetContent, bool $proxied = true, string $tenantReference = 'System DNS'): array
+    public function syncRecord(string $recordName, string $recordType, string $targetContent, bool $proxied = true, string $tenantReference = 'System DNS', ?string $zoneId = null): array
     {
         $headers = $this->getHeaders();
-        $zoneInfo = $this->getOrCreateZoneInfo($recordName, $headers);
+        
+        if ($zoneId) {
+            $zoneInfo = ['id' => $zoneId];
+        } else {
+            $zoneInfo = $this->getOrCreateZoneInfo($recordName, $headers);
+        }
 
         if (empty($zoneInfo['id'])) {
             return ['success' => false, 'error' => 'Gagal mendaftar atau mendapatkan Zone ID dari Cloudflare.'];

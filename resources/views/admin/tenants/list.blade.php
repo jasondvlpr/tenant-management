@@ -270,12 +270,12 @@
 
                                 <td class="px-6 py-4">
                                     <div class="flex flex-col gap-1.5">
-                                        <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                                        <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                                             <span x-text="'Users: ' + item.usersCount"></span>
                                             <span class="text-slate-300 dark:text-slate-600">|</span>
                                             <span x-text="'Trx: ' + item.transactionsCount"></span>
                                         </div>
-                                        <div class="text-[11px] font-mono font-semibold">
+                                        <div class="text-xs font-semibold">
                                             <span class="text-emerald-600 dark:text-emerald-400" x-text="'F.Dep: Rp ' + new Intl.NumberFormat('id-ID').format(item.firstDepositAmount)"></span>
                                             <span class="text-slate-300 dark:text-slate-600 mx-1">•</span>
                                             <span class="text-indigo-600 dark:text-indigo-400" x-text="'Re.Dep: Rp ' + new Intl.NumberFormat('id-ID').format(item.redepositAmount)"></span>
@@ -320,16 +320,16 @@
                     <button @click="openModalCreate = false" class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
                 </div>
 
-                <form action="{{ route('tenants.store') }}" method="POST" class="mt-5 space-y-4" x-data="{ isDeploying: false }" @submit="isDeploying = true">
+                <form action="{{ route('tenants.store') }}" method="POST" class="mt-5 space-y-4" x-data="{ isDeploying: false, clientName: '', tenantId: '' }" @submit="isDeploying = true">
                     @csrf
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Nama Instans / Klien <span class="text-rose-500">*</span></label>
-                            <input type="text" name="name" placeholder="Contoh: Toko Maju Jaya" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white" required>
+                            <input type="text" name="name" x-model="clientName" @input="tenantId = clientName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()" placeholder="Contoh: Toko Maju Jaya" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white" required>
                         </div>
                         <div>
                             <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">ID Unik Tenant API <span class="text-rose-500">*</span></label>
-                            <input type="text" name="remote_tenant_id" placeholder="Contoh: CLIENT-A02" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono uppercase text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white" required>
+                            <input type="text" name="remote_tenant_id" x-model="tenantId" placeholder="Contoh: TOKOMAJUJAYA" class="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 text-sm font-mono uppercase text-slate-500 cursor-not-allowed dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400" required readonly>
                             <span class="text-[10px] text-slate-400 mt-1 block">Tanpa spasi / simbol. Dipakai untuk nama DB aaPanel.</span>
                         </div>
                     </div>
