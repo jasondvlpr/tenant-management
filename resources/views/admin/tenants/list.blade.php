@@ -105,15 +105,15 @@
             }).then(res => res.json()).then(data => {
                 this.isSavingConfig = false;
                 if(data.success) {
-                    alert('Konfigurasi berhasil disimpan!');
+                    window.toast('Konfigurasi berhasil disimpan!', 'success');
                     this.openModalConfig = false;
                     this.openModalDetail = false;
                 } else {
-                    alert('Gagal: ' + data.error);
+                    window.toast('Gagal: ' + data.error, 'error');
                 }
             }).catch(err => {
                 this.isSavingConfig = false;
-                alert('Terjadi kesalahan sistem.');
+                window.toast('Terjadi kesalahan sistem.', 'error');
             });
         }
     }">

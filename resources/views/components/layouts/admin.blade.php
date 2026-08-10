@@ -9,6 +9,10 @@
     <!-- Alpine.js for interactive dashboard elements and modal toggles -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
+    <!-- Toastify JS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     <style>
@@ -38,4 +42,44 @@
         </div>
     </div>
 </body>
+<script>
+    window.toast = function(message, type = 'success') {
+        let bgColor = "#10b981"; // success: emerald-500
+        if (type === 'error') bgColor = "#ef4444"; // red-500
+        else if (type === 'info') bgColor = "#3b82f6"; // blue-500
+        else if (type === 'warning') bgColor = "#f59e0b"; // amber-500
+        
+        Toastify({
+            text: message,
+            duration: 3000,
+            close: true,
+            gravity: "top", // top or bottom
+            position: "right", // left, center or right
+            stopOnFocus: true, // Prevents dismissing of toast on hover
+            style: {
+                background: bgColor,
+                borderRadius: "8px",
+                padding: "12px 20px",
+                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                fontWeight: "500",
+                fontSize: "14px",
+                zIndex: 99999
+            },
+        }).showToast();
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        @if(session('success'))
+            window.toast("{{ session('success') }}", 'success');
+        @endif
+
+        @if(session('error'))
+            window.toast("{{ session('error') }}", 'error');
+        @endif
+        
+        @if($errors->any())
+            window.toast("{{ $errors->first() }}", 'error');
+        @endif
+    });
+</script>
 </html>

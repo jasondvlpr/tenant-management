@@ -27,15 +27,15 @@
                     if(data.cf_nameservers && data.cf_nameservers.length > 0) {
                         this.cfNameservers = data.cf_nameservers;
                     }
-                    alert(data.message);
-                    window.location.reload();
+                    window.toast(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 2000);
                 } else {
-                    alert('Gagal: ' + (data.error || 'Terjadi kesalahan'));
+                    window.toast('Gagal: ' + (data.error || 'Terjadi kesalahan'), 'error');
                 }
             })
             .catch(err => {
                 this.isCheckingCF = false;
-                alert('Terjadi kesalahan jaringan.');
+                window.toast('Terjadi kesalahan jaringan.', 'error');
                 console.error(err);
             });
         },
@@ -82,13 +82,13 @@
             }).then(res => res.json()).then(data => {
                 this.isSavingConfig = false;
                 if(data.success) {
-                    alert('Konfigurasi berhasil disimpan!');
+                    window.toast('Konfigurasi berhasil disimpan!', 'success');
                 } else {
-                    alert('Gagal: ' + data.error);
+                    window.toast('Gagal: ' + data.error, 'error');
                 }
             }).catch(err => {
                 this.isSavingConfig = false;
-                alert('Terjadi kesalahan jaringan.');
+                window.toast('Terjadi kesalahan jaringan.', 'error');
                 console.error(err);
             });
         }
@@ -311,7 +311,7 @@
                                                     @foreach($dom['cf_nameservers'] as $ns)
                                                     <div class="flex items-center gap-2">
                                                         <span>{{ $ns }}</span>
-                                                        <button @click="navigator.clipboard.writeText('{{ $ns }}'); alert('Name Server disalin ke clipboard!');" class="text-indigo-500 hover:text-indigo-700 transition" title="Copy">
+                                                        <button @click="navigator.clipboard.writeText('{{ $ns }}'); window.toast('Name Server disalin ke clipboard!', 'success');" class="text-indigo-500 hover:text-indigo-700 transition" title="Copy">
                                                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                                                         </button>
                                                     </div>

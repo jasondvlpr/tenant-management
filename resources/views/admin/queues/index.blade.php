@@ -7,7 +7,7 @@
             this.workersRunning = false;
             setTimeout(() => {
                 this.workersRunning = true;
-                alert('Worker pool berhasil di-restart dan koneksi antrean telah diperbaharui!');
+                window.toast('Worker pool berhasil di-restart dan koneksi antrean telah diperbaharui!');
             }, 1000);
         }
     }">

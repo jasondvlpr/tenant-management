@@ -39,7 +39,7 @@
             this.pingingNodeId = id;
             setTimeout(() => {
                 this.pingingNodeId = null;
-                alert('API Health Check OK: Klaster node merespons dalam latensi optimal (< 35ms).');
+                window.toast('API Health Check OK: Klaster node merespons dalam latensi optimal (< 35ms).');
             }, 800);
         }
     }">

@@ -319,7 +319,7 @@
                                         <span class="flex h-5 w-5 items-center justify-center rounded-md bg-orange-500/20 text-orange-400 font-sans font-black text-[10px]" x-text="'0' + (index + 1)"></span>
                                         <span class="text-emerald-400 font-bold tracking-wider" x-text="ns"></span>
                                     </div>
-                                    <button @click="navigator.clipboard.writeText(ns); alert('Name Server berhasil disalin ke clipboard!');" type="button" class="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-sans font-bold text-slate-300 transition flex items-center gap-1">
+                                    <button @click="navigator.clipboard.writeText(ns); window.toast('Name Server berhasil disalin ke clipboard!');" type="button" class="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-sans font-bold text-slate-300 transition flex items-center gap-1">
                                         <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                                         <span>Salin</span>
                                     </button>
