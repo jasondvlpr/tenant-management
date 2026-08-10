@@ -51,9 +51,10 @@ class ProvisionTenantJob implements ShouldQueue
             );
 
             if (!empty($cfResult['success']) && $cfResult['success']) {
-                $domains[0]['cf_status'] = 'Proxied (Orange Cloud)';
+                $zoneStatus = $cfResult['zone_status'] ?? 'pending';
+                $domains[0]['cf_status'] = $zoneStatus === 'active' ? 'Proxied (Orange Cloud)' : 'Pending (' . ucfirst($zoneStatus) . ')';
                 $domains[0]['cf_zone_id'] = $cfResult['zone_id'] ?? null;
-                $domains[0]['cf_zone_status'] = $cfResult['zone_status'] ?? 'pending';
+                $domains[0]['cf_zone_status'] = $zoneStatus;
                 $domains[0]['cf_nameservers'] = $cfResult['name_servers'] ?? [];
                 
                 $this->tenant->update(['domains' => $domains]);

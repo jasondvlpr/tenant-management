@@ -51,7 +51,6 @@ class TenantController extends Controller
                     $fail('Domain ini sudah terdaftar di sistem.');
                 }
             }],
-            'subdomains' => 'nullable|string',
         ], [
             'remote_tenant_id.regex' => 'ID Tenant tidak boleh mengandung spasi atau karakter khusus.',
             'remote_tenant_id.unique' => 'ID Tenant ini sudah terdaftar di pangkalan data.',
@@ -60,8 +59,7 @@ class TenantController extends Controller
         $colors = ['indigo', 'emerald', 'purple', 'amber', 'blue', 'rose'];
         $cleanId = strtoupper($validated['remote_tenant_id']);
 
-        $subdomainsStr = $request->input('subdomains', '');
-        $subdomains = array_values(array_filter(array_map('trim', explode(',', $subdomainsStr))));
+        $subdomains = [];
 
         $domains = [
             [

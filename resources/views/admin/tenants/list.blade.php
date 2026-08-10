@@ -350,12 +350,6 @@
                         </div>
                     </div>
 
-                    <div class="mt-4">
-                        <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Daftar Subdomain (Opsional)</label>
-                        <input type="text" name="subdomains" placeholder="contoh: www, api, admin" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                        <span class="text-[10px] text-slate-400 mt-1 block">Pisahkan dengan koma. Ini hanya untuk pendataan di panel dan belum otomatis dibuatkan DNS/VHost terpisah.</span>
-                    </div>
-
                     <!-- Cloudflare DNS Automation Toggle -->
                     <div class="p-4 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-start gap-3.5 mt-2">
                         <input type="checkbox" name="auto_dns" value="1" id="cf_auto" class="mt-1 h-4 w-4 rounded border-orange-400 text-orange-600 focus:ring-orange-500" checked>
