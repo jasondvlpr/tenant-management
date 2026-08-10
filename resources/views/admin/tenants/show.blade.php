@@ -28,6 +28,7 @@
                         this.cfNameservers = data.cf_nameservers;
                     }
                     alert(data.message);
+                    window.location.reload();
                 } else {
                     alert('Gagal: ' + (data.error || 'Terjadi kesalahan'));
                 }
@@ -247,6 +248,7 @@
                                     <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nama Domain</th>
                                     <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Subdomain</th>
                                     <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status CF</th>
+                                    <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Name Server</th>
                                     <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tipe Record</th>
                                     <th class="border border-slate-200 dark:border-slate-700 py-3 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 text-right">Aksi</th>
                                 </tr>
@@ -264,14 +266,14 @@
                                         <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">
                                             <div class="flex flex-col gap-1">
                                                 @foreach(($dom['subdomains'] ?? []) as $sub)
-                                                    <div class="flex items-center gap-2 group">
+                                                    <div class="flex items-center gap-2">
                                                         <a href="http://{{ $sub }}.{{ $dom['domain'] }}" target="_blank" class="text-[11px] font-mono text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition">
                                                             {{ $sub }}
                                                         </a>
                                                         <form action="{{ route('domains.subdomains.destroy', ['tenant' => $tenant->id, 'domainId' => $dom['id'], 'subdomain' => $sub]) }}" method="POST" onsubmit="return confirm('Hapus subdomain {{ $sub }}.{{ $dom['domain'] }}?');" class="inline-block">
                                                             @csrf
                                                             @method('DELETE')
-                                                            <button type="submit" class="opacity-0 group-hover:opacity-100 p-0.5 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition" title="Hapus Subdomain">
+                                                            <button type="submit" class="p-0.5 text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition" title="Hapus Subdomain">
                                                                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                                             </button>
                                                         </form>
@@ -302,18 +304,21 @@
                                                     {{ $dom['cf_status'] }}
                                                 </span>
                                             @endif
+                                        </td>
+                                        <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">
                                             @if(!empty($dom['cf_nameservers']))
-                                                <div class="mt-2 text-xs font-mono text-slate-400">
-                                                    <div>NS:</div>
+                                                <div class="text-xs font-mono text-slate-400">
                                                     @foreach($dom['cf_nameservers'] as $ns)
-                                                    <div class="flex items-center justify-between">
+                                                    <div class="flex items-center gap-2">
                                                         <span>{{ $ns }}</span>
-                                                        <button @click="navigator.clipboard.writeText('{{ $ns }}'); alert('Name Server disalin ke clipboard!');" class="text-indigo-500 hover:text-indigo-700 transition">
-                                                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                                        <button @click="navigator.clipboard.writeText('{{ $ns }}'); alert('Name Server disalin ke clipboard!');" class="text-indigo-500 hover:text-indigo-700 transition" title="Copy">
+                                                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                                                         </button>
                                                     </div>
                                                     @endforeach
                                                 </div>
+                                            @else
+                                                <span class="text-xs text-slate-400">-</span>
                                             @endif
                                         </td>
                                         <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">

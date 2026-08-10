@@ -141,43 +141,66 @@ class TenantController extends Controller
 
     public function checkCloudflareStatus(\Illuminate\Http\Request $request, Tenant $tenant, \App\Services\CloudflareDnsService $cfService)
     {
-        $res = $cfService->checkZoneStatus($tenant->cf_zone_id, $tenant->domain);
+        $domains = $tenant->domains ?? [];
+        $primaryDomain = $domains[0]['domain'] ?? null;
+        $cfZoneId = $domains[0]['cf_zone_id'] ?? null;
+
+        if (!$primaryDomain) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'error' => 'Tenant tidak memiliki domain utama'], 400);
+            }
+            return redirect()->back()->with('error', 'Tenant tidak memiliki domain utama.');
+        }
+
+        $res = $cfService->checkZoneStatus($cfZoneId, $primaryDomain);
 
         if (!empty($res['success']) && $res['success']) {
-            $tenant->update([
-                'cf_zone_id' => $res['id'] ?? $tenant->cf_zone_id,
-                'cf_zone_status' => $res['status'] ?? 'pending',
-                'cf_nameservers' => $res['name_servers'] ?? $tenant->cf_nameservers,
-            ]);
+            $updateData = [];
+
+            $domains = $tenant->domains ?? [];
+            if (isset($domains[0])) {
+                $domains[0]['cf_zone_id'] = $res['id'] ?? ($domains[0]['cf_zone_id'] ?? null);
+                $domains[0]['cf_zone_status'] = $res['status'] ?? 'pending';
+                
+                if (isset($res['status'])) {
+                    $domains[0]['cf_status'] = $res['status'] === 'active' ? 'Proxied (Orange Cloud)' : 'Pending (' . ucfirst($res['status']) . ')';
+                }
+                if (!empty($res['name_servers'])) {
+                    $domains[0]['cf_nameservers'] = $res['name_servers'];
+                }
+                $updateData['domains'] = $domains;
+            }
+
+            $tenant->update($updateData);
 
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
                     'status' => $res['status'],
                     'message' => $res['status'] === 'active' 
-                        ? "Selamat! Domain {$tenant->domain} resmi TERHUBUNG (Active) di Cloudflare."
-                        : "Status domain {$tenant->domain} di Cloudflare saat ini masih: " . strtoupper($res['status']) . ".",
+                        ? "Selamat! Domain {$primaryDomain} resmi TERHUBUNG (Active) di Cloudflare."
+                        : "Status domain {$primaryDomain} di Cloudflare saat ini masih: " . strtoupper($res['status']) . ".",
                     'cf_zone_status' => $res['status'],
-                    'cf_status' => $tenant->cf_status,
-                    'cf_nameservers' => $res['name_servers'] ?? $tenant->cf_nameservers,
+                    'cf_status' => $domains[0]['cf_status'] ?? 'Pending',
+                    'cf_nameservers' => $res['name_servers'] ?? ($domains[0]['cf_nameservers'] ?? []),
                 ]);
             }
 
             if ($res['status'] === 'active') {
-                return redirect()->back()->with('success', "Selamat! Domain {$tenant->domain} resmi TERHUBUNG (Active) di Cloudflare. Perlindungan WAF & Reverse Proxy Orange Cloud bekerja sempurna!");
+                return redirect()->back()->with('success', "Selamat! Domain {$primaryDomain} resmi TERHUBUNG (Active) di Cloudflare. Perlindungan WAF & Reverse Proxy Orange Cloud bekerja sempurna!");
             } else {
-                return redirect()->back()->with('success', "Status domain {$tenant->domain} di Cloudflare saat ini masih: " . strtoupper($res['status']) . ". Pastikan Anda telah memasang Name Server Cloudflare pada panel registrar domain Anda.");
+                return redirect()->back()->with('success', "Status domain {$primaryDomain} di Cloudflare saat ini masih: " . strtoupper($res['status']) . ". Pastikan Anda telah memasang Name Server Cloudflare pada panel registrar domain Anda.");
             }
         }
 
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => false,
-                'error' => $res['error'] ?? "Gagal memeriksa status koneksi Cloudflare untuk domain {$tenant->domain}."
+                'error' => $res['error'] ?? "Gagal memeriksa status koneksi Cloudflare untuk domain {$primaryDomain}."
             ], 400);
         }
 
-        return redirect()->back()->with('error', $res['error'] ?? "Gagal memeriksa status koneksi Cloudflare untuk domain {$tenant->domain}.");
+        return redirect()->back()->with('error', $res['error'] ?? "Gagal memeriksa status koneksi Cloudflare untuk domain {$primaryDomain}.");
     }
 
     public function updateConfig(Request $request, Tenant $tenant, RemoteProvisioningService $service)
