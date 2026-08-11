@@ -111,15 +111,26 @@ class RemoteProvisioningService
                             ];
                         }
                         
+                        $needsCfCheck = false;
                         // Keep existing domains if already exists to prevent overwrite cf_status
                         if (!$tenant->exists || empty($tenant->domains)) {
                              $tenant->domains = $mappedDomains;
+                             $needsCfCheck = true;
+                        } else {
+                             foreach ($tenant->domains as $dom) {
+                                 if (in_array(strtolower($dom['cf_status'] ?? ''), ['pending check', 'pending'])) {
+                                     $needsCfCheck = true;
+                                     break;
+                                 }
+                             }
                         }
                         
                         $tenant->save();
 
-                        // Dispatch job to check CF status
-                        \App\Jobs\CheckCloudflareDomainStatus::dispatch($tenant);
+                        // Dispatch job to check CF status only if needed
+                        if ($needsCfCheck) {
+                            \App\Jobs\CheckCloudflareDomainStatus::dispatch($tenant);
+                        }
 
                         $count++;
                     }
