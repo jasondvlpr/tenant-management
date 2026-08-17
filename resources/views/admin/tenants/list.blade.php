@@ -236,11 +236,16 @@
                                 <td class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">
                                     <div class="flex flex-col gap-1.5">
                                         <!-- Main Domain -->
-                                        <div class="flex items-center gap-1">
+                                        <div class="flex items-center gap-1.5">
                                             <a :href="'http://' + item.domain" target="_blank" class="text-xs text-indigo-600 hover:underline dark:text-indigo-400 font-mono flex items-center gap-1">
                                                 <span x-text="item.domain"></span>
                                                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                                             </a>
+                                            <div :title="'Cloudflare Status: ' + (item.cfZoneStatus === 'active' ? 'Active (Proxied)' : (item.cfZoneStatus || 'Pending'))" class="cursor-help">
+                                                <svg class="h-3.5 w-3.5 drop-shadow-sm transition-colors duration-200" :class="item.cfZoneStatus === 'active' ? 'text-orange-500' : 'text-slate-300 dark:text-slate-600'" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" />
+                                                </svg>
+                                            </div>
                                         </div>
                                         <!-- Aliases -->
                                         <template x-for="alias in item.aliases">
