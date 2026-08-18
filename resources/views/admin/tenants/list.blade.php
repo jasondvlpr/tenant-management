@@ -9,6 +9,18 @@
         openModalDetail: false,
         selectedFilter: 'all', 
         searchQuery: '',
+        sortCol: '',
+        sortAsc: false,
+        get sortedTenants() {
+            if (!this.sortCol) return this.tenants;
+            return [...this.tenants].sort((a, b) => {
+                let valA = a[this.sortCol] || 0;
+                let valB = b[this.sortCol] || 0;
+                if (valA < valB) return this.sortAsc ? -1 : 1;
+                if (valA > valB) return this.sortAsc ? 1 : -1;
+                return 0;
+            });
+        },
         activeTenant: null,
         activeTenantDetail: null,
         isLoadingDetail: false,
@@ -205,14 +217,29 @@
                         <tr class="border-b border-slate-200/80 bg-slate-50/70 text-xs uppercase text-slate-500 dark:border-slate-800/80 dark:bg-slate-950/50 dark:text-slate-400 font-semibold tracking-wider">
                             <th class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">Nama Tenant</th>
                             <th class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">Daftar Domain</th>
-                            <th class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">Lokasi Server Master Node</th>
+                            <th class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">Server</th>
                             <th class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">Status</th>
-                            <th class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">Statistik Transaksi</th>
+                            <th @click="sortCol = 'firstDepositAmount'; sortAsc = sortCol === 'firstDepositAmount' ? !sortAsc : false" class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none">
+                                <div class="flex items-center gap-1.5">
+                                    First Deposit
+                                    <svg x-show="sortCol === 'firstDepositAmount' && !sortAsc" class="h-3 w-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
+                                    <svg x-show="sortCol === 'firstDepositAmount' && sortAsc" class="h-3 w-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7" /></svg>
+                                    <svg x-show="sortCol !== 'firstDepositAmount'" class="h-3 w-3 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                                </div>
+                            </th>
+                            <th @click="sortCol = 'redepositAmount'; sortAsc = sortCol === 'redepositAmount' ? !sortAsc : false" class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition select-none">
+                                <div class="flex items-center gap-1.5">
+                                    Re-deposit
+                                    <svg x-show="sortCol === 'redepositAmount' && !sortAsc" class="h-3 w-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" /></svg>
+                                    <svg x-show="sortCol === 'redepositAmount' && sortAsc" class="h-3 w-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7" /></svg>
+                                    <svg x-show="sortCol !== 'redepositAmount'" class="h-3 w-3 text-slate-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                                </div>
+                            </th>
                             <th class="px-6 py-4 text-right border border-slate-200/80 dark:border-slate-800/60">Aksi & Kendali</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
-                        <template x-for="item in tenants" :key="item.id">
+                        <template x-for="item in sortedTenants" :key="item.id">
                             <tr 
                                 x-show="(selectedFilter === 'all' || item.status === selectedFilter) && (searchQuery === '' || item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.domain.toLowerCase().includes(searchQuery.toLowerCase()) || item.server.toLowerCase().includes(searchQuery.toLowerCase()))"
                                 class="group transition duration-150 hover:bg-slate-50/70 dark:hover:bg-slate-800/40"
@@ -274,18 +301,10 @@
                                 </td>
 
                                 <td class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">
-                                    <div class="flex flex-col gap-1.5">
-                                        <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                            <span x-text="'Users: ' + item.usersCount"></span>
-                                            <span class="text-slate-300 dark:text-slate-600">|</span>
-                                            <span x-text="'Trx: ' + item.transactionsCount"></span>
-                                        </div>
-                                        <div class="text-xs font-semibold">
-                                            <span class="text-emerald-600 dark:text-emerald-400" x-text="'F.Dep: Rp ' + new Intl.NumberFormat('id-ID').format(item.firstDepositAmount)"></span>
-                                            <span class="text-slate-300 dark:text-slate-600 mx-1">•</span>
-                                            <span class="text-indigo-600 dark:text-indigo-400" x-text="'Re.Dep: Rp ' + new Intl.NumberFormat('id-ID').format(item.redepositAmount)"></span>
-                                        </div>
-                                    </div>
+                                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(item.firstDepositAmount)"></span>
+                                </td>
+                                <td class="px-6 py-4 border border-slate-200/80 dark:border-slate-800/60">
+                                    <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400" x-text="'Rp ' + new Intl.NumberFormat('id-ID').format(item.redepositAmount)"></span>
                                 </td>
 
                                 <td class="px-6 py-4 text-right border border-slate-200/80 dark:border-slate-800/60">
