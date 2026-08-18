@@ -118,7 +118,11 @@ class RemoteProvisioningService
                              $needsCfCheck = true;
                         } else {
                              foreach ($tenant->domains as $dom) {
-                                 if (in_array(strtolower($dom['cf_status'] ?? ''), ['pending check', 'pending'])) {
+                                 $cfStatus = strtolower($dom['cf_status'] ?? '');
+                                 $cfZoneStatus = strtolower($dom['cf_zone_status'] ?? '');
+                                 if (in_array($cfStatus, ['pending check', 'pending']) || 
+                                     $cfZoneStatus === 'pending' || 
+                                     str_contains($cfStatus, 'pending')) {
                                      $needsCfCheck = true;
                                      break;
                                  }
