@@ -49,7 +49,16 @@ class SyncCloudflareDnsJob implements ShouldQueue
             $domains = $tenant->domains ?? [];
             foreach ($domains as &$dom) {
                 if ($dom['id'] === $this->alias->id) {
-                    $dom['cf_status'] = 'Proxied (Orange Cloud)';
+                    $finalProxied = isset($result['actual_proxied']) ? $result['actual_proxied'] : $proxied;
+                    $dom['cf_status'] = $finalProxied ? 'Proxied (Orange Cloud)' : 'DNS Only (Grey Cloud)';
+                    
+                    if (isset($result['actual_type'])) {
+                        $dom['type'] = strtoupper($result['actual_type']);
+                    }
+                    
+                    if (isset($result['zone_id'])) $dom['cf_zone_id'] = $result['zone_id'];
+                    if (isset($result['zone_status'])) $dom['cf_zone_status'] = $result['zone_status'];
+                    if (isset($result['name_servers'])) $dom['cf_nameservers'] = $result['name_servers'];
                 }
             }
             $tenant->update(['domains' => $domains]);

@@ -36,7 +36,7 @@ class DomainAliasController extends Controller
             'id' => uniqid(),
             'domain' => $validated['alias'],
             'subdomains' => $subdomains,
-            'type' => $request->input('type', 'CNAME'),
+            'type' => $request->input('type', 'A'),
             'cf_status' => str_contains($request->input('cf_proxy', 'Proxied'), 'Proxied') ? 'Proxied (Orange Cloud)' : 'DNS Only (Grey Cloud)',
             'cf_zone_id' => null,
             'cf_zone_status' => 'pending',

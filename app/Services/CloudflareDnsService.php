@@ -275,12 +275,48 @@ class CloudflareDnsService
 
             if (!$isSuccess) {
                 $errJson = $response->json();
+                $conflict = false;
                 if (!empty($errJson['errors']) && is_array($errJson['errors'])) {
                     foreach ($errJson['errors'] as $error) {
-                        if (($error['code'] ?? null) == 81058) {
-                            $isSuccess = true;
-                            $statusText = $statusCode . ' OK (Identical Record Exists)';
+                        $code = $error['code'] ?? null;
+                        if (in_array($code, [81053, 81054, 81057, 81058])) {
+                            $conflict = true;
                             break;
+                        }
+                    }
+                }
+
+                if ($conflict) {
+                    $searchEndpoint = "https://api.cloudflare.com/client/v4/zones/{$zoneId}/dns_records";
+                    $searchRes = Http::withHeaders($headers)->timeout(15)->get($searchEndpoint, ['name' => $recordName]);
+                    if ($searchRes->successful()) {
+                        $records = $searchRes->json('result', []);
+                        if (!empty($records)) {
+                            $existingRecord = $records[0];
+                            $isSuccess = true;
+                            $statusText = $statusCode . ' OK (Matched Existing CF Record)';
+                            $responseBody = json_encode(['note' => 'Used existing record from CF', 'record' => $existingRecord], JSON_PRETTY_PRINT);
+                            
+                            ApiLog::create([
+                                'method' => 'POST',
+                                'endpoint' => $endpoint,
+                                'cluster_name' => 'Cloudflare API',
+                                'tenant_name' => $tenantReference . " (Conflict Resolved)",
+                                'status_code' => 200,
+                                'status_text' => $statusText,
+                                'latency_ms' => round((microtime(true) - $startTime) * 1000) . 'ms',
+                                'request_body' => json_encode($payload, JSON_PRETTY_PRINT),
+                                'response_body' => $responseBody,
+                            ]);
+
+                            return [
+                                'success' => true,
+                                'zone_id' => $zoneId,
+                                'zone_status' => $zoneInfo['status'] ?? 'pending',
+                                'name_servers' => $zoneInfo['name_servers'] ?? [],
+                                'actual_type' => $existingRecord['type'],
+                                'actual_proxied' => $existingRecord['proxied'],
+                            ];
                         }
                     }
                 }
@@ -305,6 +341,8 @@ class CloudflareDnsService
                 'zone_id' => $zoneId,
                 'zone_status' => $zoneInfo['status'] ?? 'pending',
                 'name_servers' => $zoneInfo['name_servers'] ?? [],
+                'actual_type' => $response->json('result.type') ?? null,
+                'actual_proxied' => $response->json('result.proxied') ?? null,
             ];
 
         } catch (\Exception $e) {

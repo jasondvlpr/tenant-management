@@ -289,21 +289,43 @@
                                             </div>
                                         </td>
                                         <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">
-                                            @if(str_contains(strtolower($dom['cf_status']), 'proxied'))
-                                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
-                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.43,8.08c-0.27-2.61-2.48-4.66-5.18-4.66c-2.1,0-3.93,1.25-4.78,3.06C7.03,6.38,6.53,6.31,6,6.31 C4.34,6.31,3,7.66,3,9.31c0,0.27,0.04,0.53,0.11,0.78C2.42,10.74,2,11.83,2,13c0,2.21,1.79,4,4,4h13c1.66,0,3-1.34,3-3 C22,11.45,20.02,9.33,17.43,8.08z"/></svg>
-                                                    Proxied
-                                                </span>
-                                            @elseif(str_contains(strtolower($dom['cf_status']), 'pending'))
-                                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                                                    Pending
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-                                                    {{ $dom['cf_status'] }}
-                                                </span>
-                                            @endif
+                                            <div class="flex flex-col gap-1.5 items-start">
+                                                @if(str_contains(strtolower($dom['cf_status'] ?? ''), 'proxied'))
+                                                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
+                                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.43,8.08c-0.27-2.61-2.48-4.66-5.18-4.66c-2.1,0-3.93,1.25-4.78,3.06C7.03,6.38,6.53,6.31,6,6.31 C4.34,6.31,3,7.66,3,9.31c0,0.27,0.04,0.53,0.11,0.78C2.42,10.74,2,11.83,2,13c0,2.21,1.79,4,4,4h13c1.66,0,3-1.34,3-3 C22,11.45,20.02,9.33,17.43,8.08z"/></svg>
+                                                        Proxied
+                                                    </span>
+                                                @elseif(str_contains(strtolower($dom['cf_status'] ?? ''), 'pending'))
+                                                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                                                        Pending
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                                                        {{ $dom['cf_status'] ?? 'Unknown' }}
+                                                    </span>
+                                                @endif
+
+                                                @if(!empty($dom['cf_zone_status']))
+                                                    @if($dom['cf_zone_status'] === 'active')
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                                                            Zone: Active
+                                                        </span>
+                                                    @elseif($dom['cf_zone_status'] === 'pending')
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                                                            Zone: Pending
+                                                        </span>
+                                                    @elseif($dom['cf_zone_status'] === 'moved')
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400">
+                                                            Zone: Moved
+                                                        </span>
+                                                    @else
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-400">
+                                                            Zone: {{ ucfirst($dom['cf_zone_status']) }}
+                                                        </span>
+                                                    @endif
+                                                @endif
+                                            </div>
                                         </td>
                                         <td class="border border-slate-200 dark:border-slate-700 py-4 px-6 align-middle">
                                             @if(!empty($dom['cf_nameservers']))
@@ -467,11 +489,15 @@
                                     <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Nama Domain Alias</label>
                                     <input type="text" name="alias" placeholder="contoh.com" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white" required>
                                 </div>
+
                                 <div>
-                                    <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Daftar Subdomain (Opsional)</label>
-                                    <input type="text" name="subdomains" placeholder="contoh: www, api, admin" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                                    <span class="text-[10px] text-slate-400 mt-1 block">Pisahkan dengan koma. Ini hanya untuk pendataan di panel dan belum otomatis dibuatkan DNS/VHost terpisah.</span>
+                                    <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Tipe DNS Record</label>
+                                    <select name="type" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-white" required>
+                                        <option value="A">A Record (Mengarah ke IP Server)</option>
+                                        <option value="CNAME">CNAME (Mengarah ke Domain Utama)</option>
+                                    </select>
                                 </div>
+
 
                                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
                                     <label class="flex items-start gap-3 cursor-pointer">
